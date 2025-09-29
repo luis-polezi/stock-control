@@ -7,7 +7,7 @@ const STORAGE_KEYS = {
 
 // Configuração da API - NO INÍCIO DO ARQUIVO JS
 const API_CONFIG = {
-    baseURL: 'https://stock-control-production.up.railway.app/', // Será atualizado depois
+    baseURL: 'https://stock-control-production.up.railway.app', // Será atualizado depois
     endpoints: {
         sync: '/api/sync',
         backup: '/api/backup',
