@@ -43,7 +43,7 @@ app.post('/api/backup', async (req, res) => {
         const fileName = `backup_estoque_${new Date().toISOString().split('T')[0]}.json`;
 
         // Fazer upload para Google Drive
-        const driveResponse = await googleDriveService.uploadBackup(backupData, fileName);
+    //    const driveResponse = await googleDriveService.uploadBackup(backupData, fileName);
 
         console.log('✅ Backup realizado com sucesso no Google Drive');
 
