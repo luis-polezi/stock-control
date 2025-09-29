@@ -45,7 +45,7 @@ class GoogleDriveService {
         try {
             const fileMetadata = {
                 name: fileName,
-                parents: ['1ABC123DEF456'] // ID da pasta - atualizar depois
+                parents: ['146yUH4tW4Zioyy-FEuao_1c60KIDygRm'] // ID da pasta - atualizar depois
             };
 
             const media = {
