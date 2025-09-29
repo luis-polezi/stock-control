@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const googleDriveService = require('./services/googleDrive');
+const cloudflareR2Storage = require('./services/cloudflareR2Storage');
 
 app.use(cors());
 app.use(express.json());
@@ -17,11 +17,18 @@ app.get('/api/health', (req, res) => {
 });
 
 // Sincronizar dados
+
 app.post('/api/backup', async (req, res) => {
+    console.log('📦 Backup request recebida');
+    
     try {
         const { products, logs, user, timestamp } = req.body;
         
-        console.log('📦 Iniciando backup para Google Drive...');
+        console.log('📊 Dados recebidos:', {
+            user: user,
+            products: products?.length,
+            logs: logs?.length
+        });
 
         // Preparar dados para backup
         const backupData = {
@@ -39,20 +46,22 @@ app.post('/api/backup', async (req, res) => {
             }
         };
 
-        // Nome do arquivo com data
-        const fileName = `backup_estoque_${new Date().toISOString().split('T')[0]}.json`;
+        // Nome do arquivo
+        const fileName = `backup_estoque_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
 
-        // Fazer upload para Google Drive
-        const driveResponse = await googleDriveService.uploadBackup(backupData, fileName);
+        console.log('🔄 Iniciando upload para Cloudflare R2...');
 
-        console.log('✅ Backup realizado com sucesso no Google Drive');
+        // Fazer upload para Cloudflare R2
+        const r2Response = await cloudflareR2Storage.uploadBackup(backupData, fileName);
+
+        console.log('✅ Backup realizado com sucesso no Cloudflare R2');
 
         res.json({
             success: true,
-            message: 'Backup realizado com sucesso no Google Drive',
-            backupId: driveResponse.fileId,
-            downloadUrl: driveResponse.webViewLink,
-            timestamp: driveResponse.timestamp,
+            message: '✅ Backup JSON salvo com sucesso no Cloudflare R2!',
+            backupId: r2Response.fileId,
+            downloadUrl: r2Response.downloadUrl,
+            timestamp: r2Response.timestamp,
             details: {
                 products: products.length,
                 logs: logs.length,
@@ -64,8 +73,7 @@ app.post('/api/backup', async (req, res) => {
         console.error('❌ Erro no backup:', error);
         res.status(500).json({ 
             success: false,
-            error: 'Erro ao fazer backup no Google Drive',
-            details: error.message 
+            error: 'Erro ao fazer backup no Cloudflare R2: ' + error.message
         });
     }
 });
