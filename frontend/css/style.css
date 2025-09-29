@@ -278,18 +278,6 @@ table th:hover {
     background: #27ae60;
 }
 
-.backup-btn {
-    background: #e67e22;
-}
-
-.restore-btn {
-    background: #f39c12;
-}
-
-.reset-btn {
-    background: #e74c3c;
-}
-
 .export-btn {
     background: #9b59b6;
 }

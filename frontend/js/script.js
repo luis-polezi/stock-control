@@ -5,6 +5,17 @@ const STORAGE_KEYS = {
     BACKUP: 'estoque_backup'
 };
 
+javascript
+// Configuração da API - NO INÍCIO DO ARQUIVO JS
+const API_CONFIG = {
+    baseURL: 'https://seu-backend.herokuapp.com', // Será atualizado depois
+    endpoints: {
+        sync: '/api/sync',
+        backup: '/api/backup',
+        data: '/api/data'
+    }
+};
+
 function showError(message) {
     alert('Erro: ' + message);
     console.error(message);
@@ -111,8 +122,9 @@ let pendingMovements = {};
 let currentSort = { column: 'name', direction: 'asc' };
 
 // Função para salvar todos os dados
-function saveAllData() {
+async function saveAllData() {
     try {
+        // Salva localmente primeiro
         const success1 = storage.save(STORAGE_KEYS.PRODUCTS, products);
         const success2 = storage.save(STORAGE_KEYS.LOGS, logs);
         
@@ -122,12 +134,85 @@ function saveAllData() {
         }
         
         updateExportPreview();
+        
+        // Tenta sincronizar com backend se disponível
+        await api.syncToBackend();
+        
         return true;
     } catch (error) {
-        showError('Erro crítico ao salvar dados: ' + error.message);
+        console.error('Erro ao salvar dados:', error);
         return false;
     }
 }
+
+// Funções para comunicação com backend - ADICIONAR ESTE BLOCO
+const api = {
+    // Sincronizar dados com backend
+    syncToBackend: async function() {
+        if (!API_CONFIG.baseURL || API_CONFIG.baseURL === 'https://seu-backend.herokuapp.com') {
+            console.log('Backend não configurado - modo offline');
+            return false;
+        }
+        
+        try {
+            const response = await fetch(API_CONFIG.baseURL + API_CONFIG.endpoints.sync, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    products, 
+                    logs, 
+                    user: currentUser 
+                })
+            });
+            
+            if (response.ok) {
+                console.log('✅ Dados sincronizados com backend');
+                return true;
+            } else {
+                console.error('❌ Erro na sincronização:', response.status);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Erro de conexão com backend:', error);
+            return false;
+        }
+    },
+    
+    // Fazer backup no Google Drive via backend
+    backupToGoogleDrive: async function() {
+        if (!API_CONFIG.baseURL || API_CONFIG.baseURL === 'https://seu-backend.herokuapp.com') {
+            alert('Backup online ainda não configurado. Configure o backend primeiro.');
+            return false;
+        }
+        
+        try {
+            const response = await fetch(API_CONFIG.baseURL + API_CONFIG.endpoints.backup, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    products, 
+                    logs, 
+                    user: currentUser,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('✅ ' + result.message);
+                return true;
+            } else {
+                alert('❌ Erro no backup: ' + (result.error || 'Erro desconhecido'));
+                return false;
+            }
+        } catch (error) {
+            console.error('Erro no backup online:', error);
+            alert('❌ Erro de conexão com o servidor');
+            return false;
+        }
+    }
+};
 
 // Atualizar a prévia de exportação
 function updateExportPreview() {
@@ -178,10 +263,7 @@ function setupUserInterface() {
     });
     
     // Desabilitar botões de gerenciamento de dados para usuário viewer (exceto importação)
-    document.getElementById('backup-btn').style.display = isViewer ? 'none' : 'block';
-    document.getElementById('restore-btn').style.display = isViewer ? 'none' : 'block';
     document.getElementById('export-btn').style.display = isViewer ? 'none' : 'block';
-    document.getElementById('reset-btn').style.display = isViewer ? 'none' : 'block';
     
     // Manter importação habilitada para todos os usuários
     document.getElementById('import-btn').style.display = 'block';
@@ -777,75 +859,6 @@ document.getElementById('import-file-input').addEventListener('change', function
     }
 });
 
-// Backup dos dados
-document.getElementById('backup-btn').addEventListener('click', function() {
-    if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem fazer backup.');
-        return;
-    }
-    
-    const backupData = {
-        products: products,
-        logs: logs,
-        date: getCurrentDateTime()
-    };
-    
-    if (storage.save(STORAGE_KEYS.BACKUP, backupData)) {
-        alert('Backup realizado com sucesso!');
-    } else {
-        alert('Erro ao realizar backup!');
-    }
-});
-
-// Restaurar dados do backup
-document.getElementById('restore-btn').addEventListener('click', function() {
-    if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem restaurar backup.');
-        return;
-    }
-    
-    if (confirm('Isso substituirá todos os dados atuais. Continuar?')) {
-        const backupData = storage.load(STORAGE_KEYS.BACKUP);
-        
-        if (backupData && backupData.products && backupData.logs) {
-            products = backupData.products;
-            logs = backupData.logs;
-            
-            // Salva os dados restaurados
-            saveAllData();
-            
-            // Atualiza a interface
-            updateBalanceTable();
-            updateProductsTable();
-            updateLogsTable();
-            updateMovementGrid();
-            
-            alert('Dados restaurados com sucesso!');
-        } else {
-            alert('Nenhum backup válido encontrado!');
-        }
-    }
-});
-
-// Resetar dados
-document.getElementById('reset-btn').addEventListener('click', function() {
-    if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem resetar dados.');
-        return;
-    }
-    
-    if (confirm('Isso apagará TODOS os dados permanentemente. Tem certeza?')) {
-        if (confirm('Esta ação não pode ser desfeita. Continuar mesmo assim?')) {
-            storage.clear(STORAGE_KEYS.PRODUCTS);
-            storage.clear(STORAGE_KEYS.LOGS);
-            storage.clear(STORAGE_KEYS.BACKUP);
-            
-            // Recarrega a página para aplicar as mudanças
-            location.reload();
-        }
-    }
-});
-
 // Busca produtos na tabela de saldo
 document.getElementById('search-product').addEventListener('input', updateBalanceTable);
 
@@ -861,6 +874,18 @@ function getCurrentDateTime() {
     
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+// Backup Online no Google Drive - ADICIONAR ESTE EVENT LISTENER
+document.getElementById('drive-backup-btn').addEventListener('click', async function() {
+    if (currentUserRole === 'viewer') {
+        alert('Usuários de consulta não podem fazer backup online.');
+        return;
+    }
+    
+    if (confirm('Deseja fazer backup dos dados no Google Drive?')) {
+        await api.backupToGoogleDrive();
+    }
+});
 
 // Inicializa a ordenação por padrão por nome (A-Z)
 updateSortIndicators();
