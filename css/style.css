@@ -389,4 +389,34 @@ table th:hover {
     .share-option {
         min-width: 100%;
     }
+    
+    .logout-btn-header {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+    }
+
+    .logout-btn-header:hover {
+        background: #c0392b;
+    }
+
+    .search-logs {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
 }

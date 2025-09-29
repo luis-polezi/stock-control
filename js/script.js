@@ -5,7 +5,7 @@ const STORAGE_KEYS = {
     BACKUP: 'estoque_backup'
 };
 
-// Configuração da API - NO INÍCIO DO ARQUIVO JS
+// Configuração da API
 const API_CONFIG = {
     baseURL: 'https://stock-control-production.up.railway.app',
     endpoints: {
@@ -23,7 +23,6 @@ function showError(message) {
 
 // Funções para gerenciar o armazenamento local
 const storage = {
-    // Salvar dados
     save: function(key, data) {
         try {
             localStorage.setItem(key, JSON.stringify(data));
@@ -34,7 +33,6 @@ const storage = {
         }
     },
     
-    // Carregar dados
     load: function(key) {
         try {
             const data = localStorage.getItem(key);
@@ -45,7 +43,6 @@ const storage = {
         }
     },
     
-    // Limpar dados
     clear: function(key) {
         try {
             localStorage.removeItem(key);
@@ -57,48 +54,8 @@ const storage = {
     }
 };
 
-// Dados iniciais conforme solicitado
-
-/*
-const initialProducts = [
-    // Manta 01 Solteirão
-    { id: 1, name: "Manta 01 Solteirão", model: "Café", balance: 293 },
-    { id: 2, name: "Manta 01 Solteirão", model: "Cappucino", balance: 251 },
-    { id: 3, name: "Manta 01 Solteirão", model: "Cinza", balance: 217 },
-    { id: 4, name: "Manta 01 Solteirão", model: "Rosa", balance: 150 },
-    { id: 5, name: "Manta 01 Solteirão", model: "Off White", balance: 201 },
-    { id: 6, name: "Manta 01 Solteirão", model: "Chumbo", balance: 0 },
-    
-    // Manta 04
-    { id: 7, name: "Manta 04", model: "Vermelho Liso", balance: 40 },
-    { id: 8, name: "Manta 04", model: "Azul Liso", balance: 39 },
-    { id: 9, name: "Manta 04", model: "Beje Quadrado", balance: 52 },
-    { id: 10, name: "Manta 04", model: "Off White Quadrado", balance: 25 },
-    { id: 11, name: "Manta 04", model: "Verde Quadrado", balance: 23 },
-    { id: 12, name: "Manta 04", model: "Preto Quadrado", balance: 92 },
-    { id: 13, name: "Manta 04", model: "Caramelo Quadrado", balance: 23 },
-    { id: 14, name: "Manta 04", model: "Marrom Quadrado", balance: 25 },
-    { id: 15, name: "Manta 04", model: "Off White Lisa", balance: 19 },
-    { id: 16, name: "Manta 04", model: "Beje Lisa", balance: 15 },
-    { id: 17, name: "Manta 04", model: "Palha Lisa", balance: 0 },
-    { id: 18, name: "Manta 04", model: "Cafe Lisa", balance: 31 },
-    { id: 19, name: "Manta 04", model: "Marrom Lisa", balance: 41 },
-    { id: 20, name: "Manta 04", model: "Chumbo Liso", balance: 8 },
-    { id: 21, name: "Manta 04", model: "Cinza Liso", balance: 30 },
-    
-    // Manta 05
-    { id: 22, name: "Manta 05", model: "Marrom", balance: 106 },
-    { id: 23, name: "Manta 05", model: "Verde", balance: 33 },
-    { id: 24, name: "Manta 05", model: "Bege", balance: 20 },
-    { id: 25, name: "Manta 05", model: "Off White", balance: 44 },
-    { id: 26, name: "Manta 05", model: "Palha", balance: 128 },
-    { id: 27, name: "Manta 05", model: "Preto", balance: 69 },
-    { id: 28, name: "Manta 05", model: "Vermelho", balance: 102 },
-    { id: 29, name: "Manta 05", model: "Chumbo", balance: 50 }
-]; */
-
-// Carregar dados do armazenamento local ou usar padrão
-let products = storage.load(STORAGE_KEYS.PRODUCTS) || initialProducts;
+// REMOVI OS PRODUTOS PRÉ-DIGITADOS - AGORA COMEÇA VAZIO
+let products = storage.load(STORAGE_KEYS.PRODUCTS) || [];
 let logs = storage.load(STORAGE_KEYS.LOGS) || [];
 
 // Elementos da interface
@@ -109,7 +66,9 @@ const loginError = document.getElementById('login-error');
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
 const logoutBtn = document.getElementById('logout-btn');
+const headerLogoutBtn = document.getElementById('header-logout-btn');
 const userInfo = document.getElementById('user-info');
+const userName = document.getElementById('user-name');
 
 // Credenciais válidas
 const users = {
@@ -124,7 +83,7 @@ let pendingMovements = {};
 let currentSort = { column: 'name', direction: 'asc' };
 
 // ============================================================================
-// FUNÇÕES NOVAS ADICIONADAS AQUI (ANTES DAS OUTRAS FUNÇÕES)
+// FUNÇÕES NOVAS
 // ============================================================================
 
 // Função para verificar status do backend
@@ -169,8 +128,69 @@ async function enhancedBackup() {
     }
 }
 
+// Função para carregar último backup automaticamente (SEM CONFIRMAÇÃO)
+async function loadLatestBackupAuto() {
+    try {
+        console.log('🔄 Buscando último backup automaticamente...');
+        
+        const latestBackup = await api.getLatestBackup();
+        
+        if (latestBackup) {
+            console.log('📦 Backup encontrado:', latestBackup.fileName);
+            console.log('📅 Data:', latestBackup.createdAt);
+            
+            // Carrega automaticamente sem pedir confirmação
+            await loadBackupFromUrlAuto(latestBackup.downloadUrl);
+        } else {
+            console.log('ℹ️ Nenhum backup encontrado para carregar');
+        }
+    } catch (error) {
+        console.log('⚠️ Não foi possível verificar backups:', error);
+    }
+}
+
+// Função para carregar backup automaticamente
+async function loadBackupFromUrlAuto(backupUrl) {
+    try {
+        console.log('📥 Carregando backup automaticamente...');
+        
+        const response = await fetch(backupUrl);
+        const backupData = await response.json();
+        
+        // Validar estrutura do backup
+        if (backupData.data && backupData.data.products && Array.isArray(backupData.data.products)) {
+            
+            const productCount = backupData.data.products.length;
+            const logCount = backupData.data.logs ? backupData.data.logs.length : 0;
+            
+            console.log(`📊 Carregando backup: ${productCount} produtos, ${logCount} logs`);
+            
+            // Substituir dados atuais
+            products = backupData.data.products;
+            logs = backupData.data.logs || [];
+            
+            // Salvar localmente
+            saveAllData();
+            
+            // Atualizar interface
+            updateBalanceTable();
+            updateProductsTable();
+            updateLogsTable();
+            updateMovementGrid();
+            updateExportPreview();
+            
+            console.log('✅ Backup carregado automaticamente');
+            
+        } else {
+            throw new Error('Estrutura de backup inválida');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar backup automaticamente:', error);
+    }
+}
+
 // ============================================================================
-// FUNÇÕES ORIGINAIS (MANTIDAS)
+// FUNÇÕES ORIGINAIS (ATUALIZADAS)
 // ============================================================================
 
 // Função para salvar todos os dados
@@ -197,83 +217,8 @@ async function saveAllData() {
     }
 }
 
-// Função para carregar último backup automaticamente
-async function loadLatestBackup() {
-    try {
-        console.log('🔄 Verificando último backup...');
-        
-        const latestBackup = await api.getLatestBackup();
-        
-        if (latestBackup) {
-            console.log('📦 Backup encontrado:', latestBackup.fileName);
-            console.log('📅 Data:', latestBackup.createdAt);
-            
-            // Mostrar data formatada para o usuário
-            const backupDate = new Date(latestBackup.createdAt).toLocaleString('pt-BR');
-            
-            // Perguntar se quer carregar o backup
-            if (confirm(`Encontramos um backup de ${backupDate}.\n\nDeseja carregar estes dados?`)) {
-                await loadBackupFromUrl(latestBackup.downloadUrl);
-            }
-        } else {
-            console.log('ℹ️ Nenhum backup encontrado para carregar');
-        }
-    } catch (error) {
-        console.log('⚠️ Não foi possível verificar backups:', error);
-        // Não mostra erro para o usuário - é opcional
-    }
-}
-
-// Função para carregar backup a partir de URL
-async function loadBackupFromUrl(backupUrl) {
-    try {
-        console.log('📥 Carregando backup da URL:', backupUrl);
-        
-        const response = await fetch(backupUrl);
-        const backupData = await response.json();
-        
-        // Validar estrutura do backup
-        if (backupData.data && backupData.data.products && Array.isArray(backupData.data.products)) {
-            
-            // Mostrar resumo antes de carregar
-            const productCount = backupData.data.products.length;
-            const logCount = backupData.data.logs ? backupData.data.logs.length : 0;
-            
-            if (confirm(`Backup contém:\n• ${productCount} produtos\n• ${logCount} registros de movimentação\n\nCarregar estes dados?`)) {
-                
-                // Substituir dados atuais
-                products = backupData.data.products;
-                logs = backupData.data.logs || [];
-                
-                // Salvar localmente
-                saveAllData();
-                
-                // Atualizar interface
-                updateBalanceTable();
-                updateProductsTable();
-                updateLogsTable();
-                updateMovementGrid();
-                updateExportPreview();
-                
-                alert(`✅ Backup carregado com sucesso!\n\n${productCount} produtos e ${logCount} logs restaurados.`);
-                
-                console.log('✅ Backup carregado:', {
-                    products: products.length,
-                    logs: logs.length
-                });
-            }
-        } else {
-            throw new Error('Estrutura de backup inválida');
-        }
-    } catch (error) {
-        console.error('❌ Erro ao carregar backup:', error);
-        alert('❌ Erro ao carregar backup. Estrutura inválida ou arquivo corrompido.');
-    }
-}
-
 // Funções para comunicação com backend
 const api = {
-    // Sincronizar dados com backend
     syncToBackend: async function() {
         if (!API_CONFIG.baseURL) {
             console.log('Backend não configurado - modo offline');
@@ -304,7 +249,6 @@ const api = {
         }
     },
     
-    // Fazer backup no Cloudflare R2 via backend
     backupToCloudflare: async function() {
         if (!API_CONFIG.baseURL) {
             alert('Backup online ainda não configurado.');
@@ -339,7 +283,6 @@ const api = {
         }
     },
 
-    // Buscar último backup
     getLatestBackup: async function() {
         if (!API_CONFIG.baseURL) {
             console.log('Backend não configurado');
@@ -383,21 +326,22 @@ function updateExportPreview() {
 function setupUserInterface() {
     const isViewer = currentUserRole === 'viewer';
     
-    // Mostrar informações do usuário
-    userInfo.textContent = `${currentUser} (${isViewer ? 'Consulta' : 'Administrador'})`;
-    userInfo.style.display = 'block';
+    // Mostrar informações do usuário no header
+    userName.textContent = `${currentUser} (${isViewer ? 'Consulta' : 'Administrador'})`;
+    userInfo.style.display = 'flex';
     
     // Mostrar mensagem de modo de consulta
     document.getElementById('readonly-message').style.display = isViewer ? 'block' : 'none';
     document.getElementById('readonly-products-message').style.display = isViewer ? 'block' : 'none';
     document.getElementById('readonly-movement-message').style.display = isViewer ? 'block' : 'none';
-    document.getElementById('readonly-logs-message').style.display = isViewer ? 'block' : 'none';
     document.getElementById('readonly-data-message').style.display = isViewer ? 'block' : 'none';
     
-    // Desabilitar abas para usuário viewer
+    // REMOVI A RESTRIÇÃO DA ABA LOGS - AGORA É LIBERADA PARA CONSULTA
+    document.getElementById('logs-tab-header').classList.remove('disabled-tab');
+    
+    // Desabilitar abas para usuário viewer (exceto logs)
     document.getElementById('products-tab-header').classList.toggle('disabled-tab', isViewer);
     document.getElementById('movement-tab-header').classList.toggle('disabled-tab', isViewer);
-    document.getElementById('logs-tab-header').classList.toggle('disabled-tab', isViewer);
     
     // Desabilitar formulários e botões para usuário viewer
     document.getElementById('product-form').style.display = isViewer ? 'none' : 'block';
@@ -411,6 +355,7 @@ function setupUserInterface() {
     
     // Desabilitar botões de gerenciamento de dados para usuário viewer (exceto importação)
     document.getElementById('export-btn').style.display = isViewer ? 'none' : 'block';
+    document.getElementById('drive-backup-btn').style.display = isViewer ? 'none' : 'block';
     
     // Manter importação habilitada para todos os usuários
     document.getElementById('import-btn').style.display = 'block';
@@ -444,10 +389,10 @@ loginForm.addEventListener('submit', async function(e) {
         updateLogsTable();
         updateMovementGrid();
         
-        // ✅ VERIFICAR BACKEND E CARREGAR BACKUP (ATUALIZADO)
+        // ✅ VERIFICAR BACKEND E CARREGAR BACKUP AUTOMATICAMENTE
         const backendOnline = await checkBackendStatus();
         if (backendOnline) {
-            await loadLatestBackup();
+            await loadLatestBackupAuto(); // CARREGA AUTOMATICAMENTE
         } else {
             console.log('Modo offline - usando dados locais');
         }
@@ -457,8 +402,8 @@ loginForm.addEventListener('submit', async function(e) {
     }
 });
 
-// Função para fazer logout
-logoutBtn.addEventListener('click', function() {
+// Função para fazer logout (AMBOS OS BOTÕES)
+function logout() {
     currentUser = "";
     currentUserRole = "";
     loginScreen.style.display = 'block';
@@ -468,9 +413,12 @@ logoutBtn.addEventListener('click', function() {
     loginError.style.display = 'none';
     pendingMovements = {};
     userInfo.style.display = 'none';
-});
+}
 
-// Backup Online no Google Drive - ATUALIZADO
+logoutBtn.addEventListener('click', logout);
+headerLogoutBtn.addEventListener('click', logout);
+
+// Backup Online
 document.getElementById('drive-backup-btn').addEventListener('click', async function() {
     if (currentUserRole === 'viewer') {
         alert('Usuários de consulta não podem fazer backup online.');
@@ -478,15 +426,92 @@ document.getElementById('drive-backup-btn').addEventListener('click', async func
     }
     
     if (confirm('Deseja fazer backup dos dados?')) {
-        await enhancedBackup(); // CHAMADA ATUALIZADA
+        await enhancedBackup();
     }
 });
 
 // ============================================================================
-// RESTANTE DO SEU CÓDIGO ORIGINAL (MANTIDO)
+// FUNÇÕES DE LOGS ATUALIZADAS
 // ============================================================================
 
-// Navegação entre abas (impedir acesso a abas restritas)
+// Atualiza a tabela de logs COM FILTROS
+function updateLogsTable() {
+    const tableBody = document.getElementById('logs-table-body');
+    const searchDate = document.getElementById('search-log-date').value;
+    const searchFicha = document.getElementById('search-log-ficha').value;
+    const searchProduct = document.getElementById('search-log-product').value.toLowerCase();
+    
+    tableBody.innerHTML = '';
+    
+    let filteredLogs = [...logs].reverse(); // Mostra os mais recentes primeiro
+    
+    // Aplicar filtros
+    if (searchDate) {
+        filteredLogs = filteredLogs.filter(log => log.date.startsWith(searchDate));
+    }
+    
+    if (searchFicha) {
+        filteredLogs = filteredLogs.filter(log => 
+            log.ficha && log.ficha.toString().includes(searchFicha)
+        );
+    }
+    
+    if (searchProduct) {
+        filteredLogs = filteredLogs.filter(log => {
+            const product = products.find(p => p.id === log.productId);
+            return product && (
+                product.name.toLowerCase().includes(searchProduct) ||
+                product.model.toLowerCase().includes(searchProduct)
+            );
+        });
+    }
+    
+    filteredLogs.forEach(log => {
+        const product = products.find(p => p.id === log.productId);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${formatDateTime(log.date)}</td>
+            <td>${log.ficha || 'N/A'}</td>
+            <td>${log.user}</td>
+            <td>${product ? `${product.name} - ${product.model}` : 'Produto não encontrado'}</td>
+            <td>${log.type === 'entrada' ? 'Entrada' : 'Saída'}</td>
+            <td>${log.quantity}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Formatar data e hora para exibição
+function formatDateTime(dateTimeString) {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+// Event listeners para busca de logs
+document.getElementById('search-log-date').addEventListener('change', updateLogsTable);
+document.getElementById('search-log-ficha').addEventListener('input', updateLogsTable);
+document.getElementById('search-log-product').addEventListener('input', updateLogsTable);
+
+// Limpar busca de logs
+document.getElementById('clear-log-search').addEventListener('click', function() {
+    document.getElementById('search-log-date').value = '';
+    document.getElementById('search-log-ficha').value = '';
+    document.getElementById('search-log-product').value = '';
+    updateLogsTable();
+});
+
+// ============================================================================
+// RESTANTE DO CÓDIGO ORIGINAL (MANTIDO COM PEQUENOS AJUSTES)
+// ============================================================================
+
+// Navegação entre abas
 tabs.forEach(tab => {
     tab.addEventListener('click', function() {
         if (this.classList.contains('disabled-tab')) {
@@ -512,9 +537,7 @@ function sortProducts(products, column, direction) {
         let aValue = a[column];
         let bValue = b[column];
         
-        // Para ordenação por nome (Manta)
         if (column === 'name') {
-            // Extrai o número da manta para ordenação numérica
             const aNum = parseInt(aValue.match(/\d+/)?.[0]) || 0;
             const bNum = parseInt(bValue.match(/\d+/)?.[0]) || 0;
             
@@ -522,7 +545,6 @@ function sortProducts(products, column, direction) {
                 return direction === 'asc' ? aNum - bNum : bNum - aNum;
             }
             
-            // Se os números forem iguais, ordena pelo nome completo
             aValue = aValue.toLowerCase();
             bValue = bValue.toLowerCase();
         }
@@ -545,7 +567,6 @@ function updateBalanceTable() {
         product.model.toLowerCase().includes(searchTerm)
     );
     
-    // Aplica ordenação
     filteredProducts = sortProducts(filteredProducts, currentSort.column, currentSort.direction);
     
     filteredProducts.forEach(product => {
@@ -558,7 +579,6 @@ function updateBalanceTable() {
         tableBody.appendChild(row);
     });
     
-    // Atualiza indicadores de ordenação
     updateSortIndicators();
 }
 
@@ -567,7 +587,6 @@ function updateProductsTable() {
     const tableBody = document.getElementById('products-table-body');
     tableBody.innerHTML = '';
     
-    // Aplica ordenação
     const sortedProducts = sortProducts([...products], currentSort.column, currentSort.direction);
     
     sortedProducts.forEach(product => {
@@ -584,7 +603,6 @@ function updateProductsTable() {
         tableBody.appendChild(row);
     });
     
-    // Adiciona eventos aos botões de edição (apenas para admin)
     if (currentUserRole !== 'viewer') {
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', function() {
@@ -593,7 +611,6 @@ function updateProductsTable() {
             });
         });
         
-        // Adiciona eventos aos botões de exclusão (apenas para admin)
         document.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const productId = parseInt(this.getAttribute('data-id'));
@@ -602,31 +619,27 @@ function updateProductsTable() {
         });
     }
     
-    // Atualiza indicadores de ordenação
     updateSortIndicators();
 }
 
-// Atualiza os indicadores de ordenação nas tabelas
+// Atualiza os indicadores de ordenação
 function updateSortIndicators() {
-    // Remove todos os indicadores
     document.querySelectorAll('.sort-indicator').forEach(indicator => {
         indicator.textContent = '';
     });
     
-    // Adiciona o indicador na coluna atual
     const currentHeader = document.querySelector(`th[data-sort="${currentSort.column}"] .sort-indicator`);
     if (currentHeader) {
         currentHeader.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
     }
 }
 
-// Adiciona eventos de ordenação aos cabeçalhos das tabelas
+// Adiciona eventos de ordenação
 document.addEventListener('click', function(e) {
     if (e.target.closest('th[data-sort]')) {
         const header = e.target.closest('th[data-sort]');
         const column = header.getAttribute('data-sort');
         
-        // Alterna a direção se for a mesma coluna
         if (currentSort.column === column) {
             currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
@@ -634,38 +647,16 @@ document.addEventListener('click', function(e) {
             currentSort.direction = 'asc';
         }
         
-        // Atualiza as tabelas
         updateBalanceTable();
         updateProductsTable();
     }
 });
-
-// Atualiza a tabela de logs
-function updateLogsTable() {
-    const tableBody = document.getElementById('logs-table-body');
-    tableBody.innerHTML = '';
-    
-    logs.forEach(log => {
-        const product = products.find(p => p.id === log.productId);
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${log.date}</td>
-            <td>${log.ficha || 'N/A'}</td>
-            <td>${log.user}</td>
-            <td>${product ? `${product.name} - ${product.model}` : 'Produto não encontrado'}</td>
-            <td>${log.type === 'entrada' ? 'Entrada' : 'Saída'}</td>
-            <td>${log.quantity}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
 
 // Atualiza a grade de movimentação
 function updateMovementGrid() {
     const grid = document.getElementById('movement-grid');
     grid.innerHTML = '';
     
-    // Aplica ordenação
     const sortedProducts = sortProducts([...products], currentSort.column, currentSort.direction);
     
     sortedProducts.forEach(product => {
@@ -685,7 +676,6 @@ function updateMovementGrid() {
         grid.appendChild(movementItem);
     });
     
-    // Adiciona eventos aos botões de contador (apenas para admin)
     if (currentUserRole !== 'viewer') {
         document.querySelectorAll('.counter-btn.plus').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -705,19 +695,15 @@ function updateMovementGrid() {
 
 // Ajusta o contador de movimentação
 function adjustCounter(productId, change) {
-    // Inicializa se não existir
     if (!pendingMovements[productId]) {
         pendingMovements[productId] = 0;
     }
     
-    // Atualiza o valor
     pendingMovements[productId] += change;
     
-    // Atualiza a exibição
     const counterValue = document.querySelector(`.counter-value[data-id="${productId}"]`);
     counterValue.textContent = pendingMovements[productId];
     
-    // Aplica a classe de cor
     if (pendingMovements[productId] > 0) {
         counterValue.className = 'counter-value positive';
     } else if (pendingMovements[productId] < 0) {
@@ -753,22 +739,20 @@ document.getElementById('save-movements').addEventListener('click', function() {
             const type = quantity > 0 ? 'entrada' : 'saida';
             const absQuantity = Math.abs(quantity);
             
-            // Encontra o produto
             const productIndex = products.findIndex(p => p.id === parseInt(productId));
             
             if (productIndex !== -1) {
-                // Atualiza o saldo do produto
                 products[productIndex].balance += quantity;
                 
-                // Registra o log com a ficha
+                // SALVA LOG COM TIMESTAMP COMPLETO
                 const newLog = {
                     id: logs.length > 0 ? Math.max(...logs.map(l => l.id)) + 1 : 1,
                     productId: parseInt(productId),
                     type,
                     quantity: absQuantity,
-                    date: getCurrentDateTime(),
+                    date: getCurrentDateTime(), // DATA E HORA COMPLETA
                     user: currentUser,
-                    ficha: ficha // Adiciona o número da ficha ao log
+                    ficha: ficha
                 };
                 
                 logs.push(newLog);
@@ -777,23 +761,16 @@ document.getElementById('save-movements').addEventListener('click', function() {
     }
     
     if (hasMovements) {
-        // Limpa as movimentações pendentes
         pendingMovements = {};
-        
-        // Limpa o campo da ficha
         fichaInput.value = '';
-        
-        // Salva os dados
         saveAllData();
         
-        // Exibe mensagem de sucesso
         const successMessage = document.getElementById('movement-success');
         successMessage.style.display = 'block';
         setTimeout(() => {
             successMessage.style.display = 'none';
         }, 3000);
         
-        // Atualiza as tabelas
         updateBalanceTable();
         updateProductsTable();
         updateLogsTable();
@@ -818,18 +795,14 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
     const balance = parseInt(document.getElementById('initial-balance').value);
     
     if (productId) {
-        // Edição de produto
         const index = products.findIndex(p => p.id === parseInt(productId));
         if (index !== -1) {
             products[index].name = name;
             products[index].model = model;
-            // O saldo não é alterado na edição
         }
         
-        // Limpa o formulário
         cancelEdit();
     } else {
-        // Cadastro de novo produto
         const newProduct = {
             id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
             name,
@@ -839,34 +812,30 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
         
         products.push(newProduct);
         
-        // Registra o log de entrada inicial
+        // SALVA LOG DO CADASTRO COM TIMESTAMP
         const newLog = {
             id: logs.length > 0 ? Math.max(...logs.map(l => l.id)) + 1 : 1,
             productId: newProduct.id,
             type: 'entrada',
             quantity: balance,
-            date: getCurrentDateTime(),
+            date: getCurrentDateTime(), // DATA E HORA COMPLETA
             user: currentUser,
-            ficha: 'Cadastro Inicial' // Ficha padrão para cadastro
+            ficha: 'Cadastro Inicial'
         };
         
         logs.push(newLog);
         
-        // Limpa o formulário
         this.reset();
     }
     
-    // Salva os dados
     saveAllData();
     
-    // Exibe mensagem de sucesso
     const successMessage = document.getElementById('product-success');
     successMessage.style.display = 'block';
     setTimeout(() => {
         successMessage.style.display = 'none';
     }, 3000);
     
-    // Atualiza as tabelas
     updateBalanceTable();
     updateProductsTable();
     updateLogsTable();
@@ -890,7 +859,6 @@ function editProduct(productId) {
         document.getElementById('product-submit-btn').textContent = 'Atualizar Produto';
         document.getElementById('product-cancel-btn').style.display = 'block';
         
-        // Rola para o topo do formulário
         document.getElementById('products-tab').scrollTop = 0;
     }
 }
@@ -913,16 +881,9 @@ function deleteProduct(productId) {
     }
     
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-        // Remove o produto
         products = products.filter(p => p.id !== productId);
-        
-        // Remove os logs relacionados ao produto
         logs = logs.filter(l => l.productId !== productId);
-        
-        // Salva os dados
         saveAllData();
-        
-        // Atualiza as tabelas
         updateBalanceTable();
         updateProductsTable();
         updateLogsTable();
@@ -951,7 +912,6 @@ document.getElementById('export-json-btn').addEventListener('click', function() 
     const link = document.createElement('a');
     link.href = url;
     
-    // Nomeando arquivo
     const formatDate = (date) => {
     return date.toISOString()
         .replace(/T/, '_')
@@ -974,7 +934,6 @@ function validateImportedData(data) {
         throw new Error('Dados de produtos inválidos');
     }
     
-    // Verificar estrutura mínima dos produtos
     data.products.forEach((product, index) => {
         if (!product.name || !product.model || typeof product.balance !== 'number') {
             throw new Error(`Produto na posição ${index} está com estrutura inválida`);
@@ -998,25 +957,18 @@ document.getElementById('import-json-btn').addEventListener('click', function() 
     reader.onload = function(e) {
         try {
             const importedData = JSON.parse(e.target.result);
-            
-            // Validação completa dos dados
             validateImportedData(importedData);
             
             if (confirm('Isso substituirá todos os dados atuais. Continuar?')) {
                 products = importedData.products;
                 logs = importedData.logs || [];
-                
-                // Salva os dados importados
                 saveAllData();
-                
-                // Atualiza a interface
                 updateBalanceTable();
                 updateProductsTable();
                 updateLogsTable();
                 updateMovementGrid();
-                
                 alert('Dados importados com sucesso!');
-                fileInput.value = ''; // Limpa o input de arquivo
+                fileInput.value = '';
             }
         } catch (error) {
             alert('Erro ao importar dados: ' + error.message);
@@ -1047,7 +999,7 @@ document.getElementById('import-file-input').addEventListener('change', function
 // Busca produtos na tabela de saldo
 document.getElementById('search-product').addEventListener('input', updateBalanceTable);
 
-// Função para obter a data e hora atual formatada
+// Função para obter a data e hora atual formatada (MELHORADA)
 function getCurrentDateTime() {
     const now = new Date();
     const year = now.getFullYear();
@@ -1060,5 +1012,5 @@ function getCurrentDateTime() {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-// Inicializa a ordenação por padrão por nome (A-Z)
+// Inicializa a ordenação
 updateSortIndicators();
