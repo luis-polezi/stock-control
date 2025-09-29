@@ -401,7 +401,9 @@ table th:hover {
     margin-left: 10px;
     }
 
-    .logout-btn-header:hover {
+}
+
+.logout-btn-header:hover {
         background: #c0392b;
     }
 
@@ -418,5 +420,3 @@ table th:hover {
         align-items: center;
         gap: 10px;
     }
-
-}
