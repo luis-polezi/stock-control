@@ -5,7 +5,6 @@ const STORAGE_KEYS = {
     BACKUP: 'estoque_backup'
 };
 
-javascript
 // Configuração da API - NO INÍCIO DO ARQUIVO JS
 const API_CONFIG = {
     baseURL: '', // Será atualizado depois
