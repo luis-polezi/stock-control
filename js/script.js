@@ -990,8 +990,8 @@ document.getElementById('drive-backup-btn').addEventListener('click', async func
         return;
     }
     
-    if (confirm('Deseja fazer backup dos dados no Google Drive?')) {
-        await api.backupToGoogleDrive();
+    if (confirm('Deseja fazer backup dos dados?')) {
+        await api.backupToCloudflare();
     }
 });
 
