@@ -58,6 +58,8 @@ const storage = {
 };
 
 // Dados iniciais conforme solicitado
+
+/*
 const initialProducts = [
     // Manta 01 Solteirão
     { id: 1, name: "Manta 01 Solteirão", model: "Café", balance: 293 },
@@ -93,7 +95,7 @@ const initialProducts = [
     { id: 27, name: "Manta 05", model: "Preto", balance: 69 },
     { id: 28, name: "Manta 05", model: "Vermelho", balance: 102 },
     { id: 29, name: "Manta 05", model: "Chumbo", balance: 50 }
-];
+]; */
 
 // Carregar dados do armazenamento local ou usar padrão
 let products = storage.load(STORAGE_KEYS.PRODUCTS) || initialProducts;
