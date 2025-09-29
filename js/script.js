@@ -8,7 +8,7 @@ const STORAGE_KEYS = {
 javascript
 // Configuração da API - NO INÍCIO DO ARQUIVO JS
 const API_CONFIG = {
-    baseURL: 'https://seu-backend.herokuapp.com', // Será atualizado depois
+    baseURL: '', // Será atualizado depois
     endpoints: {
         sync: '/api/sync',
         backup: '/api/backup',
