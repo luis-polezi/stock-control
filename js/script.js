@@ -121,6 +121,56 @@ let currentUserRole = "";
 let pendingMovements = {};
 let currentSort = { column: 'name', direction: 'asc' };
 
+// ============================================================================
+// FUNÇÕES NOVAS ADICIONADAS AQUI (ANTES DAS OUTRAS FUNÇÕES)
+// ============================================================================
+
+// Função para verificar status do backend
+async function checkBackendStatus() {
+    try {
+        const response = await fetch(API_CONFIG.baseURL + '/api/health');
+        const data = await response.json();
+        console.log('✅ Backend conectado:', data.status);
+        return true;
+    } catch (error) {
+        console.log('⚠️ Backend offline - modo local');
+        return false;
+    }
+}
+
+// Melhorar a função de backup com mais feedback
+async function enhancedBackup() {
+    const backupBtn = document.getElementById('drive-backup-btn');
+    const originalText = backupBtn.textContent;
+    
+    try {
+        backupBtn.textContent = '🔄 Fazendo Backup...';
+        backupBtn.disabled = true;
+        
+        const success = await api.backupToCloudflare();
+        
+        if (success) {
+            backupBtn.textContent = '✅ Backup Concluído!';
+            setTimeout(() => {
+                backupBtn.textContent = originalText;
+                backupBtn.disabled = false;
+            }, 2000);
+        } else {
+            throw new Error('Backup falhou');
+        }
+    } catch (error) {
+        backupBtn.textContent = '❌ Erro no Backup';
+        setTimeout(() => {
+            backupBtn.textContent = originalText;
+            backupBtn.disabled = false;
+        }, 2000);
+    }
+}
+
+// ============================================================================
+// FUNÇÕES ORIGINAIS (MANTIDAS)
+// ============================================================================
+
 // Função para salvar todos os dados
 async function saveAllData() {
     try {
@@ -370,7 +420,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateExportPreview();
 });
 
-// Função para fazer login
+// ============================================================================
+// EVENT LISTENERS ATUALIZADOS
+// ============================================================================
+
+// Função para fazer login (ATUALIZADA)
 loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -413,6 +467,22 @@ logoutBtn.addEventListener('click', function() {
     pendingMovements = {};
     userInfo.style.display = 'none';
 });
+
+// Backup Online no Google Drive - ATUALIZADO
+document.getElementById('drive-backup-btn').addEventListener('click', async function() {
+    if (currentUserRole === 'viewer') {
+        alert('Usuários de consulta não podem fazer backup online.');
+        return;
+    }
+    
+    if (confirm('Deseja fazer backup dos dados?')) {
+        await enhancedBackup(); // CHAMADA ATUALIZADA
+    }
+});
+
+// ============================================================================
+// RESTANTE DO SEU CÓDIGO ORIGINAL (MANTIDO)
+// ============================================================================
 
 // Navegação entre abas (impedir acesso a abas restritas)
 tabs.forEach(tab => {
@@ -987,32 +1057,6 @@ function getCurrentDateTime() {
     
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
-
-// Backup Online no Google Drive - ADICIONAR ESTE EVENT LISTENER
-document.getElementById('drive-backup-btn').addEventListener('click', async function() {
-    if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem fazer backup online.');
-        return;
-    }
-    
-    if (confirm('Deseja fazer backup dos dados?')) {
-        await enhancedBackup(); // CHAMADA ATUALIZADA
-    }
-});
-
-// Função para verificar status do backend
-async function checkBackendStatus() {
-    try {
-        const response = await fetch(API_CONFIG.baseURL + '/api/health');
-        const data = await response.json();
-        console.log('✅ Backend conectado:', data.status);
-        return true;
-    } catch (error) {
-        console.log('⚠️ Backend offline - modo local');
-        return false;
-    }
-}
-
 
 // Inicializa a ordenação por padrão por nome (A-Z)
 updateSortIndicators();
