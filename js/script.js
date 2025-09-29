@@ -54,7 +54,7 @@ const storage = {
     }
 };
 
-// REMOVI OS PRODUTOS PRÉ-DIGITADOS - AGORA COMEÇA VAZIO
+// Sistema começa vazio
 let products = storage.load(STORAGE_KEYS.PRODUCTS) || [];
 let logs = storage.load(STORAGE_KEYS.LOGS) || [];
 
@@ -83,8 +83,42 @@ let pendingMovements = {};
 let currentSort = { column: 'name', direction: 'asc' };
 
 // ============================================================================
-// FUNÇÕES NOVAS
+// FUNÇÕES DE BACKUP AUTOMÁTICO
 // ============================================================================
+
+// Função para backup automático
+async function autoBackup() {
+    try {
+        console.log('🔄 Iniciando backup automático...');
+        
+        if (!API_CONFIG.baseURL) {
+            console.log('Backend não configurado - backup automático ignorado');
+            return;
+        }
+        
+        const response = await fetch(API_CONFIG.baseURL + API_CONFIG.endpoints.backup, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                products, 
+                logs, 
+                user: currentUser,
+                timestamp: new Date().toISOString(),
+                automatic: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Backup automático realizado com sucesso');
+        } else {
+            console.log('⚠️ Backup automático falhou:', result.error);
+        }
+    } catch (error) {
+        console.log('⚠️ Erro no backup automático:', error);
+    }
+}
 
 // Função para verificar status do backend
 async function checkBackendStatus() {
@@ -99,36 +133,7 @@ async function checkBackendStatus() {
     }
 }
 
-// Melhorar a função de backup com mais feedback
-async function enhancedBackup() {
-    const backupBtn = document.getElementById('drive-backup-btn');
-    const originalText = backupBtn.textContent;
-    
-    try {
-        backupBtn.textContent = '🔄 Fazendo Backup...';
-        backupBtn.disabled = true;
-        
-        const success = await api.backupToCloudflare();
-        
-        if (success) {
-            backupBtn.textContent = '✅ Backup Concluído!';
-            setTimeout(() => {
-                backupBtn.textContent = originalText;
-                backupBtn.disabled = false;
-            }, 2000);
-        } else {
-            throw new Error('Backup falhou');
-        }
-    } catch (error) {
-        backupBtn.textContent = '❌ Erro no Backup';
-        setTimeout(() => {
-            backupBtn.textContent = originalText;
-            backupBtn.disabled = false;
-        }, 2000);
-    }
-}
-
-// Função para carregar último backup automaticamente (SEM CONFIRMAÇÃO)
+// Função para carregar último backup automaticamente
 async function loadLatestBackupAuto() {
     try {
         console.log('🔄 Buscando último backup automaticamente...');
@@ -137,7 +142,6 @@ async function loadLatestBackupAuto() {
         
         if (latestBackup) {
             console.log('📦 Backup encontrado:', latestBackup.fileName);
-            console.log('📅 Data:', latestBackup.createdAt);
             
             // Carrega automaticamente sem pedir confirmação
             await loadBackupFromUrlAuto(latestBackup.downloadUrl);
@@ -177,7 +181,6 @@ async function loadBackupFromUrlAuto(backupUrl) {
             updateProductsTable();
             updateLogsTable();
             updateMovementGrid();
-            updateExportPreview();
             
             console.log('✅ Backup carregado automaticamente');
             
@@ -190,10 +193,157 @@ async function loadBackupFromUrlAuto(backupUrl) {
 }
 
 // ============================================================================
-// FUNÇÕES ORIGINAIS (ATUALIZADAS)
+// FUNÇÕES DE EXPORTAÇÃO/IMPORTAÇÃO
 // ============================================================================
 
-// Função para salvar todos os dados
+// Exportar para JSON
+function exportToJSON() {
+    const exportData = {
+        products: products,
+        logs: logs,
+        exportDate: new Date().toISOString(),
+        system: "Sistema de Estoque",
+        version: "2.0",
+        totalProducts: products.length,
+        totalLogs: logs.length,
+        exportedBy: currentUser
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const formatDate = (date) => {
+        return date.toISOString()
+            .replace(/T/, '_')
+            .replace(/\..+/, '')
+            .replace(/:/g, '-');
+    };
+    link.download = `estoque_${formatDate(new Date())}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    alert('✅ Dados exportados em JSON com sucesso!');
+}
+
+// Exportar para CSV (Excel)
+function exportToCSV() {
+    // Cabeçalhos do CSV para produtos
+    let csvContent = "Nome do Produto,Modelo (Cor),Saldo Atual\n";
+    
+    // Adicionar produtos
+    products.forEach(product => {
+        csvContent += `"${product.name}","${product.model}",${product.balance}\n`;
+    });
+    
+    // Cabeçalhos do CSV para logs
+    const logsCSV = "Data/Hora,Ficha,Usuário,Produto,Modelo,Movimentação,Valor\n" +
+        logs.map(log => {
+            const product = products.find(p => p.id === log.productId);
+            const productName = product ? product.name : 'Produto não encontrado';
+            const productModel = product ? product.model : 'N/A';
+            return `"${log.date}","${log.ficha || 'N/A'}","${log.user}","${productName}","${productModel}","${log.type === 'entrada' ? 'Entrada' : 'Saída'}",${log.quantity}`;
+        }).join('\n');
+    
+    // Criar arquivo CSV principal (produtos)
+    const csvBlob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const csvLink = document.createElement('a');
+    csvLink.href = csvUrl;
+    csvLink.download = `estoque_produtos_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(csvLink);
+    csvLink.click();
+    document.body.removeChild(csvLink);
+    URL.revokeObjectURL(csvUrl);
+    
+    // Criar arquivo CSV de logs
+    const logsBlob = new Blob([logsCSV], {type: 'text/csv;charset=utf-8;'});
+    const logsUrl = URL.createObjectURL(logsBlob);
+    const logsLink = document.createElement('a');
+    logsLink.href = logsUrl;
+    logsLink.download = `estoque_logs_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(logsLink);
+    logsLink.click();
+    document.body.removeChild(logsLink);
+    URL.revokeObjectURL(logsUrl);
+    
+    alert('✅ Dados exportados em CSV (Excel) com sucesso!\n\nDois arquivos foram baixados:\n- estoque_produtos_[data].csv (Produtos)\n- estoque_logs_[data].csv (Logs)');
+}
+
+// Importar dados de arquivo
+function importFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                let importedData;
+                
+                if (file.name.endsWith('.json')) {
+                    // Importar JSON
+                    importedData = JSON.parse(e.target.result);
+                    validateImportedData(importedData);
+                } else if (file.name.endsWith('.csv')) {
+                    // Importar CSV (implementação básica)
+                    importedData = parseCSV(e.target.result);
+                } else {
+                    reject(new Error('Formato de arquivo não suportado. Use JSON ou CSV.'));
+                    return;
+                }
+                
+                resolve(importedData);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        reader.onerror = function() {
+            reject(new Error('Erro ao ler o arquivo'));
+        };
+        
+        if (file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+            reader.readAsText(file);
+        } else {
+            reject(new Error('Formato de arquivo não suportado'));
+        }
+    });
+}
+
+// Função básica para parse de CSV
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    const products = [];
+    
+    // Pular cabeçalho e processar linhas
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue;
+        
+        // Processamento básico de CSV - pode ser expandido conforme necessidade
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        if (values.length >= 3) {
+            products.push({
+                id: products.length + 1,
+                name: values[0],
+                model: values[1],
+                balance: parseInt(values[2]) || 0
+            });
+        }
+    }
+    
+    return { products: products, logs: [] };
+}
+
+// ============================================================================
+// FUNÇÕES PRINCIPAIS
+// ============================================================================
+
+// Função para salvar todos os dados (COM BACKUP AUTOMÁTICO)
 async function saveAllData() {
     try {
         // Salva localmente primeiro
@@ -205,10 +355,11 @@ async function saveAllData() {
             return false;
         }
         
-        updateExportPreview();
-        
         // Tenta sincronizar com backend se disponível
         await api.syncToBackend();
+        
+        // FAZ BACKUP AUTOMÁTICO APÓS SALVAR
+        await autoBackup();
         
         return true;
     } catch (error) {
@@ -248,40 +399,6 @@ const api = {
             return false;
         }
     },
-    
-    backupToCloudflare: async function() {
-        if (!API_CONFIG.baseURL) {
-            alert('Backup online ainda não configurado.');
-            return false;
-        }
-        
-        try {
-            const response = await fetch(API_CONFIG.baseURL + API_CONFIG.endpoints.backup, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    products, 
-                    logs, 
-                    user: currentUser,
-                    timestamp: new Date().toISOString()
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                alert('✅ ' + result.message);
-                return true;
-            } else {
-                alert('❌ Erro no backup: ' + (result.error || 'Erro desconhecido'));
-                return false;
-            }
-        } catch (error) {
-            console.error('Erro no backup online:', error);
-            alert('❌ Erro de conexão com o servidor');
-            return false;
-        }
-    },
 
     getLatestBackup: async function() {
         if (!API_CONFIG.baseURL) {
@@ -304,24 +421,6 @@ const api = {
     }
 };
 
-// Atualizar a prévia de exportação
-function updateExportPreview() {
-    const exportData = {
-        products: products,
-        logs: logs,
-        exportDate: new Date().toISOString(),
-        system: "Sistema de Estoque",
-        version: "1.0",
-        totalProducts: products.length,
-        totalLogs: logs.length,
-        exportedBy: currentUser
-    };
-    
-    document.getElementById('export-preview').textContent = 
-        JSON.stringify(exportData, null, 2).substring(0, 500) + 
-        (JSON.stringify(exportData, null, 2).length > 500 ? '...' : '');
-}
-
 // Configurar interface baseada no tipo de usuário
 function setupUserInterface() {
     const isViewer = currentUserRole === 'viewer';
@@ -336,7 +435,7 @@ function setupUserInterface() {
     document.getElementById('readonly-movement-message').style.display = isViewer ? 'block' : 'none';
     document.getElementById('readonly-data-message').style.display = isViewer ? 'block' : 'none';
     
-    // REMOVI A RESTRIÇÃO DA ABA LOGS - AGORA É LIBERADA PARA CONSULTA
+    // Liberar aba logs para consulta
     document.getElementById('logs-tab-header').classList.remove('disabled-tab');
     
     // Desabilitar abas para usuário viewer (exceto logs)
@@ -353,25 +452,15 @@ function setupUserInterface() {
         btn.style.display = isViewer ? 'none' : 'inline-block';
     });
     
-    // Desabilitar botões de gerenciamento de dados para usuário viewer (exceto importação)
-    document.getElementById('export-btn').style.display = isViewer ? 'none' : 'block';
-    document.getElementById('drive-backup-btn').style.display = isViewer ? 'none' : 'block';
-    
-    // Manter importação habilitada para todos os usuários
-    document.getElementById('import-btn').style.display = 'block';
-    document.getElementById('import-json-btn').style.display = 'block';
+    // DESABILITAR IMPORTAÇÃO PARA USUÁRIO CONSULTA
+    document.getElementById('import-section').style.display = isViewer ? 'none' : 'block';
 }
 
-// Carregar dados ao iniciar
-document.addEventListener('DOMContentLoaded', function() {
-    updateExportPreview();
-});
-
 // ============================================================================
-// EVENT LISTENERS ATUALIZADOS
+// EVENT LISTENERS PRINCIPAIS
 // ============================================================================
 
-// Função para fazer login (ATUALIZADA)
+// Função para fazer login
 loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -389,10 +478,10 @@ loginForm.addEventListener('submit', async function(e) {
         updateLogsTable();
         updateMovementGrid();
         
-        // ✅ VERIFICAR BACKEND E CARREGAR BACKUP AUTOMATICAMENTE
+        // VERIFICAR BACKEND E CARREGAR BACKUP AUTOMATICAMENTE
         const backendOnline = await checkBackendStatus();
         if (backendOnline) {
-            await loadLatestBackupAuto(); // CARREGA AUTOMATICAMENTE
+            await loadLatestBackupAuto();
         } else {
             console.log('Modo offline - usando dados locais');
         }
@@ -402,7 +491,7 @@ loginForm.addEventListener('submit', async function(e) {
     }
 });
 
-// Função para fazer logout (AMBOS OS BOTÕES)
+// Função para fazer logout
 function logout() {
     currentUser = "";
     currentUserRole = "";
@@ -418,97 +507,84 @@ function logout() {
 logoutBtn.addEventListener('click', logout);
 headerLogoutBtn.addEventListener('click', logout);
 
-// Backup Online
-document.getElementById('drive-backup-btn').addEventListener('click', async function() {
+// Exportar para JSON
+document.getElementById('export-json-btn').addEventListener('click', function() {
+    exportToJSON();
+});
+
+// Exportar para CSV
+document.getElementById('export-csv-btn').addEventListener('click', function() {
+    exportToCSV();
+});
+
+// Importar dados
+document.getElementById('import-data-btn').addEventListener('click', function() {
     if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem fazer backup online.');
+        alert('Usuários de consulta não podem importar dados.');
         return;
     }
     
-    if (confirm('Deseja fazer backup dos dados?')) {
-        await enhancedBackup();
-    }
-});
-
-// ============================================================================
-// FUNÇÕES DE LOGS ATUALIZADAS
-// ============================================================================
-
-// Atualiza a tabela de logs COM FILTROS
-function updateLogsTable() {
-    const tableBody = document.getElementById('logs-table-body');
-    const searchDate = document.getElementById('search-log-date').value;
-    const searchFicha = document.getElementById('search-log-ficha').value;
-    const searchProduct = document.getElementById('search-log-product').value.toLowerCase();
+    const fileInput = document.getElementById('import-file-input');
+    const file = fileInput.files[0];
     
-    tableBody.innerHTML = '';
-    
-    let filteredLogs = [...logs].reverse(); // Mostra os mais recentes primeiro
-    
-    // Aplicar filtros
-    if (searchDate) {
-        filteredLogs = filteredLogs.filter(log => log.date.startsWith(searchDate));
+    if (!file) {
+        alert('Por favor, selecione um arquivo para importar.');
+        return;
     }
     
-    if (searchFicha) {
-        filteredLogs = filteredLogs.filter(log => 
-            log.ficha && log.ficha.toString().includes(searchFicha)
-        );
-    }
-    
-    if (searchProduct) {
-        filteredLogs = filteredLogs.filter(log => {
-            const product = products.find(p => p.id === log.productId);
-            return product && (
-                product.name.toLowerCase().includes(searchProduct) ||
-                product.model.toLowerCase().includes(searchProduct)
-            );
+    importFromFile(file)
+        .then(importedData => {
+            if (confirm('Isso substituirá todos os dados atuais. Continuar?')) {
+                products = importedData.products;
+                logs = importedData.logs || [];
+                saveAllData();
+                updateBalanceTable();
+                updateProductsTable();
+                updateLogsTable();
+                updateMovementGrid();
+                alert('✅ Dados importados com sucesso!');
+                fileInput.value = '';
+                
+                // BACKUP AUTOMÁTICO APÓS IMPORTAÇÃO
+                autoBackup();
+            }
+        })
+        .catch(error => {
+            alert('❌ Erro ao importar dados: ' + error.message);
         });
+});
+
+// Pré-visualizar dados ao selecionar arquivo
+document.getElementById('import-file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let previewText;
+                
+                if (file.name.endsWith('.json')) {
+                    const importedData = JSON.parse(e.target.result);
+                    previewText = JSON.stringify(importedData, null, 2);
+                } else if (file.name.endsWith('.csv')) {
+                    previewText = e.target.result;
+                } else {
+                    previewText = 'Formato de arquivo não suportado';
+                }
+                
+                document.getElementById('import-preview').textContent = 
+                    previewText.substring(0, 500) + 
+                    (previewText.length > 500 ? '...' : '');
+            } catch (error) {
+                document.getElementById('import-preview').textContent = 'Erro ao ler arquivo: ' + error.message;
+            }
+        };
+        reader.readAsText(file);
     }
-    
-    filteredLogs.forEach(log => {
-        const product = products.find(p => p.id === log.productId);
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${formatDateTime(log.date)}</td>
-            <td>${log.ficha || 'N/A'}</td>
-            <td>${log.user}</td>
-            <td>${product ? `${product.name} - ${product.model}` : 'Produto não encontrado'}</td>
-            <td>${log.type === 'entrada' ? 'Entrada' : 'Saída'}</td>
-            <td>${log.quantity}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-// Formatar data e hora para exibição
-function formatDateTime(dateTimeString) {
-    const date = new Date(dateTimeString);
-    return date.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-}
-
-// Event listeners para busca de logs
-document.getElementById('search-log-date').addEventListener('change', updateLogsTable);
-document.getElementById('search-log-ficha').addEventListener('input', updateLogsTable);
-document.getElementById('search-log-product').addEventListener('input', updateLogsTable);
-
-// Limpar busca de logs
-document.getElementById('clear-log-search').addEventListener('click', function() {
-    document.getElementById('search-log-date').value = '';
-    document.getElementById('search-log-ficha').value = '';
-    document.getElementById('search-log-product').value = '';
-    updateLogsTable();
 });
 
 // ============================================================================
-// RESTANTE DO CÓDIGO ORIGINAL (MANTIDO COM PEQUENOS AJUSTES)
+// FUNÇÕES DE INTERFACE E TABELAS
 // ============================================================================
 
 // Navegação entre abas
@@ -652,6 +728,79 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Atualiza a tabela de logs COM FILTROS
+function updateLogsTable() {
+    const tableBody = document.getElementById('logs-table-body');
+    const searchDate = document.getElementById('search-log-date').value;
+    const searchFicha = document.getElementById('search-log-ficha').value;
+    const searchProduct = document.getElementById('search-log-product').value.toLowerCase();
+    
+    tableBody.innerHTML = '';
+    
+    let filteredLogs = [...logs].reverse(); // Mostra os mais recentes primeiro
+    
+    // Aplicar filtros
+    if (searchDate) {
+        filteredLogs = filteredLogs.filter(log => log.date.startsWith(searchDate));
+    }
+    
+    if (searchFicha) {
+        filteredLogs = filteredLogs.filter(log => 
+            log.ficha && log.ficha.toString().includes(searchFicha)
+        );
+    }
+    
+    if (searchProduct) {
+        filteredLogs = filteredLogs.filter(log => {
+            const product = products.find(p => p.id === log.productId);
+            return product && (
+                product.name.toLowerCase().includes(searchProduct) ||
+                product.model.toLowerCase().includes(searchProduct)
+            );
+        });
+    }
+    
+    filteredLogs.forEach(log => {
+        const product = products.find(p => p.id === log.productId);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${formatDateTime(log.date)}</td>
+            <td>${log.ficha || 'N/A'}</td>
+            <td>${log.user}</td>
+            <td>${product ? `${product.name} - ${product.model}` : 'Produto não encontrado'}</td>
+            <td>${log.type === 'entrada' ? 'Entrada' : 'Saída'}</td>
+            <td>${log.quantity}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Formatar data e hora para exibição
+function formatDateTime(dateTimeString) {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+// Event listeners para busca de logs
+document.getElementById('search-log-date').addEventListener('change', updateLogsTable);
+document.getElementById('search-log-ficha').addEventListener('input', updateLogsTable);
+document.getElementById('search-log-product').addEventListener('input', updateLogsTable);
+
+// Limpar busca de logs
+document.getElementById('clear-log-search').addEventListener('click', function() {
+    document.getElementById('search-log-date').value = '';
+    document.getElementById('search-log-ficha').value = '';
+    document.getElementById('search-log-product').value = '';
+    updateLogsTable();
+});
+
 // Atualiza a grade de movimentação
 function updateMovementGrid() {
     const grid = document.getElementById('movement-grid');
@@ -713,6 +862,10 @@ function adjustCounter(productId, change) {
     }
 }
 
+// ============================================================================
+// FUNÇÕES DE PRODUTOS E MOVIMENTAÇÕES
+// ============================================================================
+
 // Salva as movimentações pendentes
 document.getElementById('save-movements').addEventListener('click', function() {
     if (currentUserRole === 'viewer') {
@@ -744,13 +897,12 @@ document.getElementById('save-movements').addEventListener('click', function() {
             if (productIndex !== -1) {
                 products[productIndex].balance += quantity;
                 
-                // SALVA LOG COM TIMESTAMP COMPLETO
                 const newLog = {
                     id: logs.length > 0 ? Math.max(...logs.map(l => l.id)) + 1 : 1,
                     productId: parseInt(productId),
                     type,
                     quantity: absQuantity,
-                    date: getCurrentDateTime(), // DATA E HORA COMPLETA
+                    date: getCurrentDateTime(),
                     user: currentUser,
                     ficha: ficha
                 };
@@ -763,6 +915,8 @@ document.getElementById('save-movements').addEventListener('click', function() {
     if (hasMovements) {
         pendingMovements = {};
         fichaInput.value = '';
+        
+        // SALVA E FAZ BACKUP AUTOMÁTICO
         saveAllData();
         
         const successMessage = document.getElementById('movement-success');
@@ -812,13 +966,12 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
         
         products.push(newProduct);
         
-        // SALVA LOG DO CADASTRO COM TIMESTAMP
         const newLog = {
             id: logs.length > 0 ? Math.max(...logs.map(l => l.id)) + 1 : 1,
             productId: newProduct.id,
             type: 'entrada',
             quantity: balance,
-            date: getCurrentDateTime(), // DATA E HORA COMPLETA
+            date: getCurrentDateTime(),
             user: currentUser,
             ficha: 'Cadastro Inicial'
         };
@@ -828,6 +981,7 @@ document.getElementById('product-form').addEventListener('submit', function(e) {
         this.reset();
     }
     
+    // SALVA E FAZ BACKUP AUTOMÁTICO
     saveAllData();
     
     const successMessage = document.getElementById('product-success');
@@ -891,42 +1045,12 @@ function deleteProduct(productId) {
     }
 }
 
-// Exportar dados para arquivo JSON
-document.getElementById('export-json-btn').addEventListener('click', function() {
-    if (currentUserRole === 'viewer') {
-        alert('Usuários de consulta não podem exportar dados.');
-        return;
-    }
-    
-    const exportData = {
-        products: products,
-        logs: logs,
-        exportDate: new Date().toISOString(),
-        system: "Sistema de Estoque"
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    
-    const formatDate = (date) => {
-    return date.toISOString()
-        .replace(/T/, '_')
-        .replace(/\..+/, '')
-        .replace(/:/g, '-');
-    };
-    link.download = `estoque_${formatDate(new Date())}.json`;
+// Busca produtos na tabela de saldo
+document.getElementById('search-product').addEventListener('input', updateBalanceTable);
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    alert('Dados exportados com sucesso! Envie o arquivo .json para outras pessoas.');
-});
+// ============================================================================
+// FUNÇÕES UTILITÁRIAS
+// ============================================================================
 
 // Função para validar dados importados
 function validateImportedData(data) {
@@ -943,63 +1067,7 @@ function validateImportedData(data) {
     return true;
 }
 
-// Importar dados de arquivo JSON
-document.getElementById('import-json-btn').addEventListener('click', function() {
-    const fileInput = document.getElementById('import-file-input');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Por favor, selecione um arquivo para importar.');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            validateImportedData(importedData);
-            
-            if (confirm('Isso substituirá todos os dados atuais. Continuar?')) {
-                products = importedData.products;
-                logs = importedData.logs || [];
-                saveAllData();
-                updateBalanceTable();
-                updateProductsTable();
-                updateLogsTable();
-                updateMovementGrid();
-                alert('Dados importados com sucesso!');
-                fileInput.value = '';
-            }
-        } catch (error) {
-            alert('Erro ao importar dados: ' + error.message);
-        }
-    };
-    reader.readAsText(file);
-});
-
-// Pré-visualizar dados ao selecionar arquivo
-document.getElementById('import-file-input').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                document.getElementById('import-preview').textContent = 
-                    JSON.stringify(importedData, null, 2).substring(0, 500) + 
-                    (JSON.stringify(importedData, null, 2).length > 500 ? '...' : '');
-            } catch (error) {
-                document.getElementById('import-preview').textContent = 'Erro ao ler arquivo: ' + error.message;
-            }
-        };
-        reader.readAsText(file);
-    }
-});
-
-// Busca produtos na tabela de saldo
-document.getElementById('search-product').addEventListener('input', updateBalanceTable);
-
-// Função para obter a data e hora atual formatada (MELHORADA)
+// Função para obter a data e hora atual formatada
 function getCurrentDateTime() {
     const now = new Date();
     const year = now.getFullYear();

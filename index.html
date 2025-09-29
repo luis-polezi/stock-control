@@ -153,7 +153,41 @@
             <!-- Aba de Logs -->
             <div id="logs-tab" class="tab-content">
                 <h2>Logs de Movimentação</h2>
+                
+                <!-- Seção de Gerenciamento de Dados (MOVIDA PARA AQUI) -->
+                <div class="data-management">
+                    <h3>Exportar/Importar Dados</h3>
+                    <div id="readonly-data-message" class="readonly-message" style="display: none;">
+                        <strong>Modo de Consulta:</strong> Apenas exportação de dados está disponível.
+                    </div>
+                    
+                    <div class="data-buttons">
+                        <div class="export-section">
+                            <h4>Exportar Dados</h4>
+                            <p>Baixe os dados em formato JSON ou Excel (CSV):</p>
+                            <div class="export-options">
+                                <button id="export-json-btn" class="export-btn" style="width: auto;">📊 Exportar JSON</button>
+                                <button id="export-csv-btn" class="export-btn" style="width: auto; background: #27ae60;">📈 Exportar Excel (CSV)</button>
+                            </div>
+                        </div>
+                        
+                        <div class="import-section" id="import-section">
+                            <h4>Importar Dados</h4>
+                            <p>Importe dados de um arquivo JSON ou Excel (CSV):</p>
+                            <div class="import-options">
+                                <input type="file" id="import-file-input" accept=".json,.csv,.xlsx" style="margin-bottom: 10px;">
+                                <button id="import-data-btn" class="import-btn" style="width: auto;">📥 Importar Dados</button>
+                            </div>
+                            <div class="data-preview" id="import-preview">
+                                {/* A prévia dos dados importados será exibida aqui */}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Busca de Logs -->
                 <div class="search-logs">
+                    <h3>Buscar em Logs</h3>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="search-log-date">Buscar por Data:</label>
@@ -186,55 +220,6 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Gerenciamento de Dados -->
-            <div class="data-management">
-                <h3>Gerenciamento de Dados</h3>
-                <div id="readonly-data-message" class="readonly-message" style="display: none;">
-                    <strong>Modo de Consulta:</strong> Apenas importação de dados está disponível.
-                </div>
-                <p>Faça backup, exporte ou importe dados do sistema.</p>
-                <div class="data-buttons">
-                    <button id="drive-backup-btn" class="drive-backup-btn">Backup</button>
-                    <button id="export-btn" class="export-btn">Exportar Dados</button>
-                    <button id="import-btn" class="import-btn">Importar Dados</button>
-                </div>
-                
-                <!-- Seção de Compartilhamento -->
-                <div class="share-section">
-                    <h4>Compartilhar Dados com Outras Pessoas</h4>
-                    <div class="share-instructions">
-                        <p><strong>Para compartilhar seus dados:</strong></p>
-                        <ol>
-                            <li>Clique em "Exportar Dados" para baixar um arquivo com todos os seus produtos e movimentações</li>
-                            <li>Envie este arquivo para a outra pessoa por email, WhatsApp, etc.</li>
-                            <li>A outra pessoa deve clicar em "Importar Dados" e selecionar o arquivo recebido</li>
-                        </ol>
-                    </div>
-                    
-                    <div class="share-options">
-                        <div class="share-option">
-                            <h5>Exportar Dados Atuais</h5>
-                            <p>Baixe um arquivo JSON com todos os dados do sistema:</p>
-                            <button id="export-json-btn" class="export-btn" style="width: auto;">Baixar Arquivo de Dados</button>
-                            <div class="data-preview" id="export-preview">
-                                {/* A prévia dos dados será exibida aqui */}
-                            </div>
-                        </div>
-                        
-                        <div class="share-option">
-                            <h5>Importar Dados</h5>
-                            <p>Selecione um arquivo JSON para importar:</p>
-                            <input type="file" id="import-file-input" accept=".json" style="margin-bottom: 10px;">
-                            <button id="import-json-btn" class="import-btn" style="width: auto;">Importar Dados do Arquivo</button>
-                            <div class="data-preview" id="import-preview">
-                                {/* A prévia dos dados importados será exibida aqui */}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
             <button id="logout-btn" class="logout-btn">Sair</button>
         </div>
     </div>
