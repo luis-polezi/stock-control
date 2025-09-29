@@ -773,7 +773,16 @@ document.getElementById('export-json-btn').addEventListener('click', function() 
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `estoque_${new Date().toISOString().split('T')[0]}.json`;
+    
+    // Nomeando arquivo
+    const formatDate = (date) => {
+    return date.toISOString()
+        .replace(/T/, '_')
+        .replace(/\..+/, '')
+        .replace(/:/g, '-');
+    };
+    link.download = `estoque_${formatDate(new Date())}.json`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
