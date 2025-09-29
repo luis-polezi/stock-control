@@ -125,13 +125,11 @@ app.get('/api/latest-backup', async (req, res) => {
     try {
         console.log('🔍 Buscando último backup...');
         
-        const { data: files, error } = await cloudflareR2Storage.listBackups();
+         // Listar arquivos no bucket
+        const backups = await cloudflareR2Storage.listBackups();
         
-        if (error) {
-            throw error;
-        }
-
-        if (!files || files.length === 0) {
+        if (!backups || backups.length === 0) {
+            console.log('ℹ️ Nenhum backup encontrado');
             return res.json({ 
                 success: true, 
                 hasBackup: false,
@@ -140,16 +138,7 @@ app.get('/api/latest-backup', async (req, res) => {
         }
 
         // Ordenar por data e pegar o mais recente
-        const latestBackup = files
-            .filter(file => file.name.includes('backup'))
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-
-        if (!latestBackup) {
-            return res.json({ 
-                success: true, 
-                hasBackup: false 
-            });
-        }
+        const latestBackup = backups[0]; // Já vem ordenado por data
 
         console.log('📦 Último backup encontrado:', latestBackup.name);
         
@@ -160,7 +149,7 @@ app.get('/api/latest-backup', async (req, res) => {
                 fileName: latestBackup.name,
                 downloadUrl: `${process.env.R2_PUBLIC_URL}/estoque/${latestBackup.name}`,
                 createdAt: latestBackup.created_at,
-                size: latestBackup.metadata?.size
+                size: latestBackup.size
             }
         });
         

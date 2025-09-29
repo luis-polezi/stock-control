@@ -4,7 +4,7 @@ class CloudflareR2StorageService {
     constructor() {
         try {
             this.s3 = new AWS.S3({
-                endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+                endpoint: `https://39244a38e8a355eacedda59e9582a500.r2.cloudflarestorage.com`,
                 accessKeyId: process.env.R2_ACCESS_KEY_ID,
                 secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
                 signatureVersion: 'v4',
