@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Estoque</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>Sistema de Gerenciamento de Estoque</h1>
+                <div id="user-info" class="user-info" style="display: none;"></div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Tela de Login -->
+        <div id="login-screen" class="login-container">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Usuário:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit">Entrar</button>
+                <div id="login-error" class="error-message">
+                    Usuário ou senha incorretos!
+                </div>
+            </form>
+            <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+                <h3>Usuário de Consulta</h3>
+                <p>Use as credenciais abaixo para acessar o sistema no modo de consulta.</p>
+                <p><strong>Usuário:</strong> consulta<br>
+                   <strong>Senha:</strong> 123456</p>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Principal (após login) -->
+        <div id="main-content" class="main-content">
+            <div class="tabs">
+                <div class="tab active" data-tab="balance">Consulta de Saldo</div>
+                <div class="tab" data-tab="products" id="products-tab-header">Cadastro de Produtos</div>
+                <div class="tab" data-tab="movement" id="movement-tab-header">Movimentação</div>
+                <div class="tab" data-tab="logs" id="logs-tab-header">Logs</div>
+            </div>
+            
+            <!-- Aba de Consulta de Saldo -->
+            <div id="balance-tab" class="tab-content active">
+                <h2>Consulta de Saldo</h2>
+                <div id="readonly-message" class="readonly-message" style="display: none;">
+                    <strong>Modo de Consulta:</strong> Você está logado como usuário de consulta. Apenas visualização permitida.
+                </div>
+                <div class="form-group">
+                    <label for="search-product">Buscar Produto:</label>
+                    <input type="text" id="search-product" placeholder="Digite o nome do produto...">
+                </div>
+                <table id="balance-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Nome <span class="sort-indicator">▼</span></th>
+                            <th data-sort="model">Modelo (Cor)</th>
+                            <th data-sort="balance">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="balance-table-body">
+                        <!-- Os dados serão preenchidos via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Aba de Cadastro de Produtos -->
+            <div id="products-tab" class="tab-content">
+                <h2>Cadastro de Produtos</h2>
+                <div id="readonly-products-message" class="readonly-message" style="display: none;">
+                    <strong>Acesso Restrito:</strong> Esta funcionalidade não está disponível para usuários de consulta.
+                </div>
+                <div id="product-success" class="success-message">
+                    Produto cadastrado com sucesso!
+                </div>
+                <form id="product-form">
+                    <input type="hidden" id="product-id" value="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-name">Nome do Produto:</label>
+                            <input type="text" id="product-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-model">Modelo (Cor):</label>
+                            <input type="text" id="product-model" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="initial-balance">Saldo Inicial:</label>
+                            <input type="number" id="initial-balance" min="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" id="product-submit-btn">Cadastrar Produto</button>
+                    <button type="button" id="product-cancel-btn" style="display: none; margin-top: 10px; background: #95a5a6;">Cancelar Edição</button>
+                </form>
+                
+                <h3>Produtos Cadastrados</h3>
+                <table id="products-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Nome <span class="sort-indicator">▼</span></th>
+                            <th data-sort="model">Modelo (Cor)</th>
+                            <th data-sort="balance">Saldo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body">
+                        <!-- Os dados serão preenchidos via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Aba de Movimentação -->
+            <div id="movement-tab" class="tab-content">
+                <h2>Movimentação de Estoque</h2>
+                <div id="readonly-movement-message" class="readonly-message" style="display: none;">
+                    <strong>Acesso Restrito:</strong> Esta funcionalidade não está disponível para usuários de consulta.
+                </div>
+                <div id="movement-success" class="success-message">
+                    Movimentação registrada com sucesso!
+                </div>
+                
+                <h3>Movimentação Rápida</h3>
+                <p>Use os contadores para ajustar o saldo de cada produto. Valores positivos aumentam o estoque, valores negativos diminuem.</p>
+                
+                <div class="movement-grid" id="movement-grid">
+                    <!-- Os itens serão preenchidos via JavaScript -->
+                </div>
+                
+                <div class="form-group">
+                    <label for="movement-ficha">Número da Ficha:</label>
+                    <input type="number" id="movement-ficha" min="1" required placeholder="Digite o número da ficha">
+                </div>
+                
+                <button id="save-movements" style="margin-top: 20px;">Salvar Todas as Movimentações</button>
+            </div>
+            
+            <!-- Aba de Logs -->
+            <div id="logs-tab" class="tab-content">
+                <h2>Logs de Movimentação</h2>
+                <div id="readonly-logs-message" class="readonly-message" style="display: none;">
+                    <strong>Acesso Restrito:</strong> Esta funcionalidade não está disponível para usuários de consulta.
+                </div>
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Ficha</th>
+                            <th>Usuário</th>
+                            <th>Produto</th>
+                            <th>Movimentação</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body">
+                        <!-- Os dados serão preenchidos via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Gerenciamento de Dados -->
+            <div class="data-management">
+                <h3>Gerenciamento de Dados</h3>
+                <div id="readonly-data-message" class="readonly-message" style="display: none;">
+                    <strong>Modo de Consulta:</strong> Apenas importação de dados está disponível.
+                </div>
+                <p>Faça backup, exporte ou importe dados do sistema.</p>
+                <div class="data-buttons">
+                    <button id="drive-backup-btn" class="drive-backup-btn">Backup Online (Google Drive)</button>
+                    <button id="backup-btn" class="backup-btn">Fazer Backup Local</button>
+                    <button id="restore-btn" class="restore-btn">Restaurar Backup Local</button>
+                    <button id="export-btn" class="export-btn">Exportar Dados</button>
+                    <button id="import-btn" class="import-btn">Importar Dados</button>
+                    <button id="reset-btn" class="reset-btn">Resetar Dados</button>
+                </div>
+                
+                <!-- Seção de Compartilhamento -->
+                <div class="share-section">
+                    <h4>Compartilhar Dados com Outras Pessoas</h4>
+                    <div class="share-instructions">
+                        <p><strong>Para compartilhar seus dados:</strong></p>
+                        <ol>
+                            <li>Clique em "Exportar Dados" para baixar um arquivo com todos os seus produtos e movimentações</li>
+                            <li>Envie este arquivo para a outra pessoa por email, WhatsApp, etc.</li>
+                            <li>A outra pessoa deve clicar em "Importar Dados" e selecionar o arquivo recebido</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="share-options">
+                        <div class="share-option">
+                            <h5>Exportar Dados Atuais</h5>
+                            <p>Baixe um arquivo JSON com todos os dados do sistema:</p>
+                            <button id="export-json-btn" class="export-btn" style="width: auto;">Baixar Arquivo de Dados</button>
+                            <div class="data-preview" id="export-preview">
+                                {/* A prévia dos dados será exibida aqui */}
+                            </div>
+                        </div>
+                        
+                        <div class="share-option">
+                            <h5>Importar Dados</h5>
+                            <p>Selecione um arquivo JSON para importar:</p>
+                            <input type="file" id="import-file-input" accept=".json" style="margin-bottom: 10px;">
+                            <button id="import-json-btn" class="import-btn" style="width: auto;">Importar Dados do Arquivo</button>
+                            <div class="data-preview" id="import-preview">
+                                {/* A prévia dos dados importados será exibida aqui */}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="logout-btn" class="logout-btn">Sair</button>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
