@@ -7,11 +7,12 @@ const STORAGE_KEYS = {
 
 // Configuração da API - NO INÍCIO DO ARQUIVO JS
 const API_CONFIG = {
-    baseURL: 'https://stock-control-production.up.railway.app', // Será atualizado depois
+    baseURL: 'https://stock-control-production.up.railway.app',
     endpoints: {
         sync: '/api/sync',
         backup: '/api/backup',
-        data: '/api/data'
+        data: '/api/data',
+        latestBackup: '/api/latest-backup'
     }
 };
 
@@ -144,11 +145,85 @@ async function saveAllData() {
     }
 }
 
-// Funções para comunicação com backend - ADICIONAR ESTE BLOCO
+// Função para carregar último backup automaticamente
+async function loadLatestBackup() {
+    try {
+        console.log('🔄 Verificando último backup...');
+        
+        const latestBackup = await api.getLatestBackup();
+        
+        if (latestBackup) {
+            console.log('📦 Backup encontrado:', latestBackup.fileName);
+            console.log('📅 Data:', latestBackup.createdAt);
+            
+            // Mostrar data formatada para o usuário
+            const backupDate = new Date(latestBackup.createdAt).toLocaleString('pt-BR');
+            
+            // Perguntar se quer carregar o backup
+            if (confirm(`Encontramos um backup de ${backupDate}.\n\nDeseja carregar estes dados?`)) {
+                await loadBackupFromUrl(latestBackup.downloadUrl);
+            }
+        } else {
+            console.log('ℹ️ Nenhum backup encontrado para carregar');
+        }
+    } catch (error) {
+        console.log('⚠️ Não foi possível verificar backups:', error);
+        // Não mostra erro para o usuário - é opcional
+    }
+}
+
+// Função para carregar backup a partir de URL
+async function loadBackupFromUrl(backupUrl) {
+    try {
+        console.log('📥 Carregando backup da URL:', backupUrl);
+        
+        const response = await fetch(backupUrl);
+        const backupData = await response.json();
+        
+        // Validar estrutura do backup
+        if (backupData.data && backupData.data.products && Array.isArray(backupData.data.products)) {
+            
+            // Mostrar resumo antes de carregar
+            const productCount = backupData.data.products.length;
+            const logCount = backupData.data.logs ? backupData.data.logs.length : 0;
+            
+            if (confirm(`Backup contém:\n• ${productCount} produtos\n• ${logCount} registros de movimentação\n\nCarregar estes dados?`)) {
+                
+                // Substituir dados atuais
+                products = backupData.data.products;
+                logs = backupData.data.logs || [];
+                
+                // Salvar localmente
+                saveAllData();
+                
+                // Atualizar interface
+                updateBalanceTable();
+                updateProductsTable();
+                updateLogsTable();
+                updateMovementGrid();
+                updateExportPreview();
+                
+                alert(`✅ Backup carregado com sucesso!\n\n${productCount} produtos e ${logCount} logs restaurados.`);
+                
+                console.log('✅ Backup carregado:', {
+                    products: products.length,
+                    logs: logs.length
+                });
+            }
+        } else {
+            throw new Error('Estrutura de backup inválida');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar backup:', error);
+        alert('❌ Erro ao carregar backup. Estrutura inválida ou arquivo corrompido.');
+    }
+}
+
+// Funções para comunicação com backend
 const api = {
     // Sincronizar dados com backend
     syncToBackend: async function() {
-        if (!API_CONFIG.baseURL || API_CONFIG.baseURL === 'https://seu-backend.herokuapp.com') {
+        if (!API_CONFIG.baseURL) {
             console.log('Backend não configurado - modo offline');
             return false;
         }
@@ -177,10 +252,10 @@ const api = {
         }
     },
     
-    // Fazer backup no Google Drive via backend
-    backupToGoogleDrive: async function() {
-        if (!API_CONFIG.baseURL || API_CONFIG.baseURL === 'https://seu-backend.herokuapp.com') {
-            alert('Backup online ainda não configurado. Configure o backend primeiro.');
+    // Fazer backup no Cloudflare R2 via backend
+    backupToCloudflare: async function() {
+        if (!API_CONFIG.baseURL) {
+            alert('Backup online ainda não configurado.');
             return false;
         }
         
@@ -209,6 +284,27 @@ const api = {
             console.error('Erro no backup online:', error);
             alert('❌ Erro de conexão com o servidor');
             return false;
+        }
+    },
+
+    // Buscar último backup
+    getLatestBackup: async function() {
+        if (!API_CONFIG.baseURL) {
+            console.log('Backend não configurado');
+            return null;
+        }
+        
+        try {
+            const response = await fetch(API_CONFIG.baseURL + '/api/latest-backup');
+            const result = await response.json();
+            
+            if (result.success && result.hasBackup) {
+                return result.backup;
+            }
+            return null;
+        } catch (error) {
+            console.log('⚠️ Não foi possível verificar backups:', error);
+            return null;
         }
     }
 };
@@ -291,6 +387,10 @@ loginForm.addEventListener('submit', function(e) {
         updateProductsTable();
         updateLogsTable();
         updateMovementGrid();
+        
+        // ✅ CARREGAR ÚLTIMO BACKUP APÓS LOGIN
+        loadLatestBackup();
+        
     } else {
         loginError.style.display = 'block';
     }

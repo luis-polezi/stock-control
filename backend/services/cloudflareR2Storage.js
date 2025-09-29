@@ -17,6 +17,33 @@ class CloudflareR2StorageService {
         }
     }
 
+    // Listar backups (já existe, mas vamos melhorar)
+    async listBackups() {
+        try {
+            const params = {
+                Bucket: process.env.R2_BUCKET_NAME,
+                Prefix: 'estoque/'
+            };
+
+            const result = await this.s3.listObjectsV2(params).promise();
+            
+            return result.Contents
+                .filter(file => file.Key.includes('backup'))
+                .sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified))
+                .map(file => ({
+                    name: file.Key.replace('estoque/', ''),
+                    size: file.Size,
+                    created_at: file.LastModified,
+                    metadata: file
+                }));
+                
+        } catch (error) {
+            console.error('❌ Erro ao listar backups:', error);
+            return [];
+        }
+    }
+
+
     async uploadBackup(data, fileName) {
         try {
             const fileContent = JSON.stringify(data, null, 2);
@@ -48,5 +75,8 @@ class CloudflareR2StorageService {
         }
     }
 }
+
+
+
 
 module.exports = new CloudflareR2StorageService();

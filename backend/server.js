@@ -120,6 +120,59 @@ app.post('/api/sync', (req, res) => {
     }
 });
 
+// Buscar último backup
+app.get('/api/latest-backup', async (req, res) => {
+    try {
+        console.log('🔍 Buscando último backup...');
+        
+        const { data: files, error } = await cloudflareR2Storage.listBackups();
+        
+        if (error) {
+            throw error;
+        }
+
+        if (!files || files.length === 0) {
+            return res.json({ 
+                success: true, 
+                hasBackup: false,
+                message: 'Nenhum backup encontrado'
+            });
+        }
+
+        // Ordenar por data e pegar o mais recente
+        const latestBackup = files
+            .filter(file => file.name.includes('backup'))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+        if (!latestBackup) {
+            return res.json({ 
+                success: true, 
+                hasBackup: false 
+            });
+        }
+
+        console.log('📦 Último backup encontrado:', latestBackup.name);
+        
+        res.json({
+            success: true,
+            hasBackup: true,
+            backup: {
+                fileName: latestBackup.name,
+                downloadUrl: `${process.env.R2_PUBLIC_URL}/estoque/${latestBackup.name}`,
+                createdAt: latestBackup.created_at,
+                size: latestBackup.metadata?.size
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao buscar último backup:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao buscar backup: ' + error.message
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
