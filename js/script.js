@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Função para fazer login
-loginForm.addEventListener('submit', function(e) {
+loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const username = document.getElementById('username').value;
@@ -388,8 +388,13 @@ loginForm.addEventListener('submit', function(e) {
         updateLogsTable();
         updateMovementGrid();
         
-        // ✅ CARREGAR ÚLTIMO BACKUP APÓS LOGIN
-        loadLatestBackup();
+        // ✅ VERIFICAR BACKEND E CARREGAR BACKUP (ATUALIZADO)
+        const backendOnline = await checkBackendStatus();
+        if (backendOnline) {
+            await loadLatestBackup();
+        } else {
+            console.log('Modo offline - usando dados locais');
+        }
         
     } else {
         loginError.style.display = 'block';
@@ -991,9 +996,23 @@ document.getElementById('drive-backup-btn').addEventListener('click', async func
     }
     
     if (confirm('Deseja fazer backup dos dados?')) {
-        await api.backupToCloudflare();
+        await enhancedBackup(); // CHAMADA ATUALIZADA
     }
 });
+
+// Função para verificar status do backend
+async function checkBackendStatus() {
+    try {
+        const response = await fetch(API_CONFIG.baseURL + '/api/health');
+        const data = await response.json();
+        console.log('✅ Backend conectado:', data.status);
+        return true;
+    } catch (error) {
+        console.log('⚠️ Backend offline - modo local');
+        return false;
+    }
+}
+
 
 // Inicializa a ordenação por padrão por nome (A-Z)
 updateSortIndicators();

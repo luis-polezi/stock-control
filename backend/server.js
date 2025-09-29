@@ -19,6 +19,12 @@ app.use(cors({
 
 app.use(express.json());
 
+// MIDDLEWARE DE LOG (ADICIONEI ESTA PARTE)
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
+
 // Import DEPOIS do CORS
 const cloudflareR2Storage = require('./services/cloudflareR2Storage');
 
@@ -158,6 +164,48 @@ app.get('/api/latest-backup', async (req, res) => {
         res.status(500).json({ 
             success: false,
             error: 'Erro ao buscar backup: ' + error.message
+        });
+    }
+});
+
+// NOVAS ROTAS QUE ADICIONEI:
+
+// Rota para listar todos os backups
+app.get('/api/backups', async (req, res) => {
+    try {
+        console.log('📋 Listando todos os backups...');
+        const backups = await cloudflareR2Storage.listBackups();
+        
+        res.json({
+            success: true,
+            backups: backups
+        });
+    } catch (error) {
+        console.error('❌ Erro ao listar backups:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao listar backups' 
+        });
+    }
+});
+
+// Rota para excluir backup
+app.delete('/api/backup/:fileName', async (req, res) => {
+    try {
+        const fileName = req.params.fileName;
+        console.log(`🗑️ Excluindo backup: ${fileName}`);
+        
+        await cloudflareR2Storage.deleteBackup(fileName);
+        
+        res.json({ 
+            success: true, 
+            message: 'Backup excluído com sucesso' 
+        });
+    } catch (error) {
+        console.error('❌ Erro ao excluir backup:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao excluir backup' 
         });
     }
 });

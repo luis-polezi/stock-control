@@ -4,7 +4,7 @@ class CloudflareR2StorageService {
     constructor() {
         try {
             this.s3 = new AWS.S3({
-                endpoint: `https://39244a38e8a355eacedda59e9582a500.r2.cloudflarestorage.com`,
+                endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
                 accessKeyId: process.env.R2_ACCESS_KEY_ID,
                 secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
                 signatureVersion: 'v4',
@@ -17,7 +17,7 @@ class CloudflareR2StorageService {
         }
     }
 
-    // Listar backups (já existe, mas vamos melhorar)
+    // Listar backups
     async listBackups() {
         try {
             const params = {
@@ -42,7 +42,6 @@ class CloudflareR2StorageService {
             return [];
         }
     }
-
 
     async uploadBackup(data, fileName) {
         try {
@@ -74,9 +73,40 @@ class CloudflareR2StorageService {
             throw error;
         }
     }
+
+    // FUNÇÃO NOVA QUE ADICIONEI - Para excluir backups
+    async deleteBackup(fileName) {
+        try {
+            const params = {
+                Bucket: process.env.R2_BUCKET_NAME,
+                Key: `estoque/${fileName}`
+            };
+            
+            await this.s3.deleteObject(params).promise();
+            console.log(`✅ Backup ${fileName} excluído`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao excluir backup:', error);
+            throw error;
+        }
+    }
+
+    // FUNÇÃO NOVA QUE ADICIONEI - Listar backups com mais detalhes
+    async listBackupsDetailed() {
+        try {
+            const backups = await this.listBackups();
+            
+            // Adicionar informações extras
+            return backups.map(backup => ({
+                ...backup,
+                displayName: backup.name.replace('backup_estoque_', '').replace('.json', ''),
+                readableDate: new Date(backup.created_at).toLocaleString('pt-BR')
+            }));
+        } catch (error) {
+            console.error('Erro ao listar backups detalhados:', error);
+            return [];
+        }
+    }
 }
-
-
-
 
 module.exports = new CloudflareR2StorageService();
