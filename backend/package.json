@@ -1,7 +1,7 @@
 {
   "name": "estoque-backend",
   "version": "1.0.0",
-  "description": "Backend para sistema de estoque com backup Google Drive",
+  "description": "Backend para sistema de estoque",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,13 +10,11 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5", 
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "googleapis": "^126.0.1",
-    "fs": "0.0.1-security"
+    "aws-sdk": "^2.1494.0"
   },
   "engines": {
     "node": ">=18.0.0"
   }
-  
 }

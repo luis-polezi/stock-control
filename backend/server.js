@@ -4,20 +4,36 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const cloudflareR2Storage = require('./services/cloudflareR2Storage');
 
-app.use(cors());
+// CORS CONFIGURADO CORRETAMENTE
+app.use(cors({
+    origin: [
+        'https://bibi-paineis-estoque.netlify.app',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+
+// Import DEPOIS do CORS
+const cloudflareR2Storage = require('./services/cloudflareR2Storage');
 
 let database = { products: [], logs: [] };
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Backend do estoque funcionando' });
+    res.json({ 
+        status: 'OK', 
+        message: 'Backend do estoque funcionando',
+        timestamp: new Date().toISOString()
+    });
 });
 
-// Sincronizar dados
-
+// Rota de Backup ÚNICA - Cloudflare R2
 app.post('/api/backup', async (req, res) => {
     console.log('📦 Backup request recebida');
     
@@ -78,33 +94,29 @@ app.post('/api/backup', async (req, res) => {
     }
 });
 
-// Backup (simulação)
-app.post('/api/backup', async (req, res) => {
+// Rota de sincronização (se precisar)
+app.post('/api/sync', (req, res) => {
     try {
-        const { products, logs, user, timestamp } = req.body;
+        const { products, logs, user } = req.body;
         
-        console.log('Backup solicitado por:', user);
+        if (!products || !Array.isArray(products)) {
+            return res.status(400).json({ error: 'Dados inválidos' });
+        }
         
-        // Simulação de backup
-        const backupData = {
-            products,
-            logs,
-            backedUpBy: user,
-            backupDate: timestamp || new Date().toISOString()
-        };
+        database.products = products;
+        database.logs = logs;
         
-        console.log('Backup realizado:', backupData);
+        console.log(`Dados sincronizados por: ${user}`);
         
-        res.json({
-            success: true,
-            message: 'Backup realizado com sucesso (simulação)',
-            backupId: `backup_${Date.now()}`,
+        res.json({ 
+            success: true, 
+            message: 'Dados sincronizados com sucesso',
             timestamp: new Date().toISOString()
         });
         
     } catch (error) {
-        console.error('Erro no backup:', error);
-        res.status(500).json({ error: 'Erro ao fazer backup' });
+        console.error('Erro na sincronização:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 
