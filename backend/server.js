@@ -18,54 +18,38 @@ app.get('/api/health', (req, res) => {
 
 // Sincronizar dados
 app.post('/api/backup', async (req, res) => {
+    console.log('📦 Backup request recebida');
+    
     try {
-        const { products, logs, user, timestamp } = req.body;
+        const { products, logs, user } = req.body;
         
-        console.log('📦 Iniciando backup para Google Drive...');
+        console.log('📊 Dados recebidos:', {
+            user: user,
+            products: products?.length,
+            logs: logs?.length
+        });
 
-        // Preparar dados para backup
-        const backupData = {
-            system: "Sistema de Estoque",
-            version: "1.0.0",
-            backupDate: timestamp || new Date().toISOString(),
-            backedUpBy: user,
+        // SIMULAÇÃO - REMOVA DEPOIS
+        const simulatedResponse = {
+            success: true,
+            message: '✅ Backup simulado - Backend funcionando!',
+            backupId: 'simulated_' + Date.now(),
+            timestamp: new Date().toISOString(),
             data: {
-                products: products,
-                logs: logs
-            },
-            totals: {
-                products: products.length,
-                logs: logs.length
+                products: products?.length || 0,
+                logs: logs?.length || 0
             }
         };
 
-        // Nome do arquivo com data
-        const fileName = `backup_estoque_${new Date().toISOString().split('T')[0]}.json`;
-
-        // Fazer upload para Google Drive
-    //    const driveResponse = await googleDriveService.uploadBackup(backupData, fileName);
-
-        console.log('✅ Backup realizado com sucesso no Google Drive');
-
-        res.json({
-            success: true,
-            message: 'Backup realizado com sucesso no Google Drive',
-            backupId: driveResponse.fileId,
-            downloadUrl: driveResponse.webViewLink,
-            timestamp: driveResponse.timestamp,
-            details: {
-                products: products.length,
-                logs: logs.length,
-                fileName: fileName
-            }
-        });
+        console.log('✅ Resposta simulada:', simulatedResponse);
         
+        res.json(simulatedResponse);
+
     } catch (error) {
         console.error('❌ Erro no backup:', error);
         res.status(500).json({ 
             success: false,
-            error: 'Erro ao fazer backup no Google Drive',
-            details: error.message 
+            error: 'Erro interno: ' + error.message
         });
     }
 });
