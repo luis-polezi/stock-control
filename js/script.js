@@ -72,6 +72,7 @@ const userName = document.getElementById('user-name');
 
 // Credenciais válidas
 const users = {
+    "admin": { password: "133712", role: "admin" },
     "Gabriela": { password: "070315", role: "admin" },
     "consulta": { password: "123456", role: "viewer" }
 };
