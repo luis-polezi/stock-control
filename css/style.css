@@ -493,3 +493,34 @@ table th:hover {
     font-size: 12px;
     white-space: pre-wrap;
 }
+
+.btn-user-manager {
+    padding: 12px 20px;
+    width: 70%;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 10px auto;
+    display: block;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-user-manager:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* MAGIA: Botão some em todas as telas */
+.btn-user-manager {
+    display: none;
+}
+
+/* Botão aparece APENAS na tela de login */
+#login-screen .btn-user-manager {
+    display: block;
+}

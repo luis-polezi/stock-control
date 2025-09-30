@@ -1081,5 +1081,15 @@ function getCurrentDateTime() {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    const adminButton = document.getElementById('admin-access-btn');
+    
+    if (adminButton) {
+        adminButton.addEventListener('click', function() {
+            window.location.href = 'admin.html';
+        });
+    }
+});
+
 // Inicializa a ordenação
 updateSortIndicators();
