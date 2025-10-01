@@ -72,9 +72,16 @@ const userName = document.getElementById('user-name');
 
 // Credenciais válidas
 const users = {
-    "admin": { password: "133712", role: "admin" },
+    "admin": { password: "133712", role: "master" },
     "Gabriela": { password: "070315", role: "admin" },
     "consulta": { password: "123456", role: "viewer" }
+};
+
+// Constantes para os roles (opcional, mas organiza)
+const USER_ROLES = {
+    MASTER: 'master',
+    ADMIN: 'admin', 
+    VIEWER: 'viewer'
 };
 
 // Variáveis para controle de estado
@@ -1086,7 +1093,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (adminButton) {
         adminButton.addEventListener('click', function() {
-            window.location.href = 'admin.html';
+            //window.location.href = 'admin.html'; // linha comentada para página em construção
+            window.location.href = 'reforma.html'; // remover linha para habilitar painel admin
         });
     }
 });

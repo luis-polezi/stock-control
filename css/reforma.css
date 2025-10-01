@@ -1,0 +1,22 @@
+* {
+    margin: 0;
+}
+
+.reforma-site {
+width: 100vw;
+height: 100vh;
+background: #ffffff;
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+}
+.reforma-box {
+width: 80%;
+height: auto;
+background: #fff;
+}
+
+.reforma-img {
+    width: 100%;
+}
