@@ -16,6 +16,16 @@ const API_CONFIG = {
     }
 };
 
+const SYSTEM_VERSION = "1.0";
+
+// No DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    const versionFooter = document.getElementById('version-footer');
+    if (versionFooter) {
+        versionFooter.innerHTML = `Sistema de Gerenciamento de Estoque - <strong>v${SYSTEM_VERSION}</strong>`;
+    }
+});
+
 function showError(message) {
     alert('Erro: ' + message);
     console.error(message);

@@ -493,3 +493,13 @@ table th:hover {
     font-size: 12px;
     white-space: pre-wrap;
 }
+
+.system-footer {
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 15px 0;
+    text-align: center;
+    color: #6c757d;
+    font-size: 14px;
+    margin-top: 40px;
+}
