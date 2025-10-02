@@ -1,0 +1,22 @@
+Problemas e correções em cada versão
+v1.0
+Versão inicial do sistema, com:
+    -Cadastro de produto
+    -Estoque manual
+    -Movimentação de saldo com ficha
+    -Usuários
+    -Backup na nuvem
+    -Logs
+
+
+v1.1
+O usuário não permanece logado caso atualize a página
+Implementar código login persistente, com tempo de expiração.
+Outras atualizações:
+    -Inclusão do favicon (GFSUPPORT)
+    
+
+v1.2
+a aba movimentação não possui nenhum campo de filtro ou classificação
+Seria interessante criarmos uma aba para usuários admin onde eles conseguissem criar "classificações" de produtos,
+e também essas classificações aparecerem na hora de cadastrar o produto
